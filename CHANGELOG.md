@@ -7,6 +7,9 @@ change behaviour; such changes are listed under **Changed**).
 
 ## [Unreleased]
 
+### Documentation
+- Link the MATREX VR experiment manual and the companion HejjéTrac/Daari Deepa toolchain, keeping tracker input distinct from experiment telemetry.
+
 ## [0.6.2] - 2026-10-13
 
 **0.6.2 is the release 0.6.1 was meant to be.** The `v0.6.1` tag was made

@@ -39,6 +39,12 @@ The name joins **ರೆಕ್ಕೆ** (*rekke*, the [Kannada word for wing](http
 
 ---
 
+## Companion experiments and analysis
+
+[MATREX VR](https://github.com/pvnkmrksk/matrexVR) supplies the Unity visual environment for closed-loop animal experiments: Choice tasks, swarms, mirrored animal poses, terrain and astronomical sky. Rekkefly supplies the measured flight input. The [MATREX VR manual](https://pvnkmrksk.github.io/matrexVR/manual/) documents per-rig ports, the JSON/radian input contract and the distinction between stable releases and current source.
+
+For walking acquisition, see [HejjéTrac](https://github.com/pvnkmrksk/hejjetrak). For browser-based saved-trajectory analysis, see [Daari Deepa](https://github.com/pvnkmrksk/trajectory-dashboard). These tools have independent releases; MATREX VR's outbound monitoring PUB is separate from Rekkefly's tracking PUB. [Connection and units guide](https://pvnkmrksk.github.io/matrexVR/manual/integrations.html).
+
 ## Contents
 
 This README is the tour. The [documentation](https://pvnkmrksk.github.io/rekkefly/docs/) has the details: every setting, the measurement format, tuning, troubleshooting and the full command-line and MCP references, with search.
