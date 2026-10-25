@@ -72,6 +72,10 @@ To receive on another computer, connect to `tcp://<rig computer>:9871` and allow
 that port through the rig computer's firewall. To keep the publisher private to
 one computer, set `zmq_bind = "tcp://127.0.0.1:9871"`.
 
+## MATREX VR and trajectory analysis
+
+[MATREX VR](https://github.com/pvnkmrksk/matrexVR) can use this Kinefly-compatible JSON flight output to control its animal rig. Match the publisher port to the selected rig's input SUB and retain the signed-radian yaw convention. Its [input contract](https://pvnkmrksk.github.io/matrexVR/manual/input-contracts.html) distinguishes tracker input, outbound experiment telemetry and post-release source additions. [Daari Deepa](https://github.com/pvnkmrksk/trajectory-dashboard) provides browser-based trajectory analysis; the [toolchain guide](https://pvnkmrksk.github.io/matrexVR/manual/integrations.html) links the related projects and transport directions.
+
 ## Full measurements over UDP
 
 Every frame is also sent as one JSON datagram from `output.bind` (this rig's own
