@@ -399,6 +399,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "chacha20"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
+dependencies = [
+ "cfg-if 1.0.5",
+ "cpufeatures",
+ "rand_core",
+]
+
+[[package]]
 name = "clang-sys"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -641,6 +652,15 @@ dependencies = [
  "libc",
  "metal",
  "objc",
+]
+
+[[package]]
+name = "cpufeatures"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -1060,7 +1080,6 @@ checksum = "9a31d2a3fbaaeb2af2368bbdd904aa8e812d3c04a1ee10d3171f52d556e5d0a3"
 dependencies = [
  "futures-channel",
  "futures-core",
- "futures-executor",
  "futures-io",
  "futures-sink",
  "futures-task",
@@ -1082,17 +1101,6 @@ name = "futures-core"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92d699e522242e69e3003b94ecc1f960f3a5e015aa7c5d7486e65ad01dd94f5e"
-
-[[package]]
-name = "futures-executor"
-version = "0.3.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "031b47cf1a3c6cc8bc2fc76cd437f521619387907d469316e7c0bc278f1f5432"
-dependencies = [
- "futures-core",
- "futures-task",
- "futures-util",
-]
 
 [[package]]
 name = "futures-io"
@@ -1184,6 +1192,7 @@ dependencies = [
  "cfg-if 1.0.5",
  "libc",
  "r-efi 6.0.0",
+ "rand_core",
 ]
 
 [[package]]
@@ -2388,15 +2397,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ppv-lite86"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
-dependencies = [
- "zerocopy",
-]
-
-[[package]]
 name = "prettyplease"
 version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2474,32 +2474,20 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "rand"
-version = "0.9.5"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9ef1d0d795eb7d84685bca4f72f3649f064e6641543d3a8c415898726a57b41"
+checksum = "65c9fb96cbc91e3478eaae79a69fcd3f1ae4ad052e471fe6732fff548984b4af"
 dependencies = [
- "rand_chacha",
- "rand_core",
-]
-
-[[package]]
-name = "rand_chacha"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb"
-dependencies = [
- "ppv-lite86",
+ "chacha20",
+ "getrandom 0.4.3",
  "rand_core",
 ]
 
 [[package]]
 name = "rand_core"
-version = "0.9.5"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
-dependencies = [
- "getrandom 0.3.4",
-]
+checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "raw-window-handle"
@@ -2789,16 +2777,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
-name = "signal-hook-registry"
-version = "1.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
-dependencies = [
- "errno",
- "libc",
-]
-
-[[package]]
 name = "simd-adler32"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3052,9 +3030,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",
@@ -3200,8 +3176,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cc1186384beb7dd8eedea376413fd654937285ea6c9cfbb928dc3043ea4b606"
 dependencies = [
  "getrandom 0.4.3",
- "js-sys",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -4075,23 +4049,23 @@ dependencies = [
 
 [[package]]
 name = "zeromq"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efb2c254fd8f366755335c9e43b865f8484fe3bd717d65ffe7c3f28852863030"
+checksum = "55b31ad37d1aad854ddc8c4f16b637259ce95f757f6c32f05447279c68ed9e2a"
 dependencies = [
  "async-trait",
  "asynchronous-codec",
  "bytes",
  "crossbeam-queue",
  "futures",
+ "futures-channel",
  "log",
- "num-traits",
- "once_cell",
  "parking_lot",
  "rand",
  "regex",
  "scc",
- "thiserror 1.0.69",
+ "socket2",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-util",
  "uuid",
