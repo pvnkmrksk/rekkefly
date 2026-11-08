@@ -35,6 +35,9 @@ pub struct State {
     pub udp_dropped: u64,
     pub zmq_dropped: u64,
     pub recording: RecordingState,
+    pub recording_finalizations: Vec<RecordingState>,
+    pub paused: bool,
+    pub command_error: Option<String>,
     /// What is being acquired, for example the camera name and mode.
     pub source: String,
     /// Why the configured camera was replaced by the sample video.
@@ -69,6 +72,9 @@ enum Command {
     LoadBackground,
     DemoBackground,
     Record(bool),
+    RecordTo(PathBuf),
+    StopRecordIf(PathBuf, String),
+    Pause(bool),
 }
 pub struct Engine {
     state: Arc<Mutex<State>>,
@@ -246,6 +252,30 @@ impl Engine {
             .send(Command::Record(enabled))
             .context("Acquisition has stopped")
     }
+    pub fn record_to(&self, directory: PathBuf) -> Result<()> {
+        ensure!(directory.is_absolute(), "Recording root must be absolute");
+        self.sender
+            .send(Command::RecordTo(directory))
+            .context("Acquisition has stopped")
+    }
+    pub fn stop_recording_if(&self, directory: PathBuf, request_id: String) -> Result<()> {
+        ensure!(
+            directory.is_absolute(),
+            "Expected recording root must be absolute"
+        );
+        ensure!(
+            request_id.len() == 32 && request_id.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "Stop request identity must be 32 hexadecimal characters"
+        );
+        self.sender
+            .send(Command::StopRecordIf(directory, request_id))
+            .context("Acquisition has stopped")
+    }
+    pub fn pause(&self, paused: bool) -> Result<()> {
+        self.sender
+            .send(Command::Pause(paused))
+            .context("Acquisition has stopped")
+    }
     pub fn load_background(&self) -> Result<()> {
         self.sender
             .send(Command::LoadBackground)
@@ -351,6 +381,8 @@ fn run(
     let mut frames = 0;
     let mut dropped = 0;
     let mut capture_bg = false;
+    let mut paused = false;
+    let mut owned_recording_root = None;
     let mut subscribers: Vec<mpsc::SyncSender<Measurement>> = Vec::new();
     {
         let mut s = state.lock().unwrap();
@@ -390,14 +422,63 @@ fn run(
                         capture_bg = true;
                         Ok(())
                     }
-                    Command::Record(true) if sample => Err(anyhow::anyhow!(
+                    Command::RecordTo(_) | Command::Record(true) if sample => Err(anyhow::anyhow!(
                         "Recording is off while the sample plays; connect the camera and Restart"
                     )),
+                    Command::Pause(value) => {
+                        if value
+                            && !paused
+                            && let Some(r) = &mut recorder
+                        {
+                            r.capture_paused();
+                        }
+                        paused = value;
+                        state.lock().unwrap().paused = value;
+                        Ok(())
+                    }
+                    Command::RecordTo(directory) => (|| {
+                        ensure!(
+                            recorder.as_ref().is_none_or(|r| !r.accepting()),
+                            "A recording is already active; stop the owned take before starting another"
+                        );
+                        let parent = directory.parent().context("Recording root has no parent")?;
+                        std::fs::create_dir_all(parent).context("Create recording parent")?;
+                        std::fs::create_dir(&directory)
+                            .context("Recording root must be a new directory")?;
+                        if let Some(old) = recorder.take() {
+                            draining.push(old);
+                        }
+                        let mut recording_config = config.clone();
+                        recording_config.recording.format = crate::config::VideoFormat::Mjpeg;
+                        recording_config.recording.directory =
+                            directory.to_string_lossy().into_owned();
+                        recorder = Some(Recorder::start(&recording_config, &path)?);
+                        owned_recording_root = Some(directory);
+                        Ok(())
+                    })(),
+                    Command::StopRecordIf(expected, request_id) => {
+                        if let Some(r) = &mut recorder {
+                            if let Some(root) = &owned_recording_root
+                                && (root == &expected
+                                    || r.state().directory.as_ref() == Some(&expected))
+                            {
+                                r.request_owned_stop(request_id);
+                                Ok(())
+                            } else {
+                                Err(anyhow::anyhow!(
+                                    "Recorder belongs to another take; it was not stopped"
+                                ))
+                            }
+                        } else {
+                            Ok(())
+                        }
+                    }
                     Command::Record(enabled) => {
                         if enabled && recorder.as_ref().is_none_or(|r| !r.accepting()) {
                             if let Some(old) = recorder.take() {
                                 draining.push(old);
                             }
+                            owned_recording_root = None;
                             Recorder::start(&config, &path).map(|r| {
                                 recorder = Some(r);
                             })
@@ -449,9 +530,20 @@ fn run(
                             s.message = "Live".into();
                         }
                         s.error = None;
+                        s.command_error = None;
                     }
-                    Err(e) => s.message = format!("{e:#}"),
+                    Err(e) => {
+                        s.message = format!("{e:#}");
+                        s.command_error = Some(format!("{e:#}"));
+                    }
                 }
+            }
+            if paused {
+                if let Some(r) = &recorder {
+                    state.lock().unwrap().recording = r.state();
+                }
+                thread::sleep(Duration::from_millis(5));
+                continue;
             }
             let Some(raw) = source.next_frame(&stop)? else {
                 if !stop.load(Ordering::Relaxed) {
@@ -495,6 +587,11 @@ fn run(
                     if let Err(error) = old.finish() {
                         prior_recording_error = Some(format!("{error:#}"));
                     }
+                    let mut shared = state.lock().unwrap();
+                    if shared.recording_finalizations.len() >= 32 {
+                        shared.recording_finalizations.remove(0);
+                    }
+                    shared.recording_finalizations.push(old.state());
                 } else {
                     index += 1;
                 }
@@ -583,4 +680,40 @@ fn run(
     }
     output_result?;
     Ok(())
+}
+
+/// Shared state/commands for a reconnectable native GUI or headless endpoint.
+pub fn control_command(
+    engine: &Engine,
+    command: &str,
+    args: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    match command {
+        "record_start" => engine.record_to(PathBuf::from(
+            args["directory"]
+                .as_str()
+                .context("record_start requires directory")?,
+        ))?,
+        "record_stop" => engine.stop_recording_if(
+            PathBuf::from(
+                args["expected_directory"]
+                    .as_str()
+                    .context("Owned stop requires expected_directory")?,
+            ),
+            args["stop_request_id"]
+                .as_str()
+                .context("Owned stop requires stop_request_id")?
+                .to_owned(),
+        )?,
+        "pause" => engine.pause(true)?,
+        "start" => engine.pause(false)?,
+        "status" => {}
+        _ => anyhow::bail!("Unsupported native command"),
+    }
+    let state = engine.state();
+    Ok(
+        serde_json::json!({"queued":command!="status","backend":"rekkefly","processId":std::process::id(),
+        "frames":state.frames,"paused":state.paused,"ended":state.finished,"error":state.error,"command_error":state.command_error,
+        "source":state.source,"fallback":state.fallback,"recording":state.recording,"recording_finalizations":state.recording_finalizations}),
+    )
 }

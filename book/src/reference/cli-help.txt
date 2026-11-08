@@ -60,6 +60,15 @@ Options:
       --record
           Record video to this instance's recording directory
 
+      --control-dir <CONTROL_DIR>
+          Reconnectable local recording control for this native window; no network listener
+
+      --control-instance <CONTROL_INSTANCE>
+          Unique 32-character launch identity for --control-dir
+
+      --no-camera-fallback
+          Fail if the requested camera cannot open; never substitute sample/demo input. Independent of supervision: closing the launcher does not stop this app
+
       --init
           Create a sample configuration at --config and exit (never overwrites)
 

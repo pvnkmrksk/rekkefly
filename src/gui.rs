@@ -115,6 +115,7 @@ pub struct App {
     autosaver: Option<Autosaver>,
     last_autosave: Config,
     shutdown: Arc<AtomicBool>,
+    control: Option<crate::native_mailbox::Mailbox>,
 }
 fn app_icon() -> egui::IconData {
     let icon = image::load_from_memory(include_bytes!("../assets/rekkefly-64.png"))
@@ -140,6 +141,7 @@ pub struct Launch {
     /// Panels to open at start: "settings", "plots".
     pub panels: Vec<String>,
     pub shutdown: Arc<AtomicBool>,
+    pub control_directory: Option<(PathBuf, String)>,
 }
 fn window_title(config: &Config) -> String {
     let source = match &config.source {
@@ -173,6 +175,7 @@ pub fn launch(launch: Launch) -> eframe::Result<()> {
         screenshot_after,
         panels,
         shutdown,
+        control_directory,
     } = launch;
     let config = overrides.apply(&saved);
     let title = window_title(&config);
@@ -203,6 +206,12 @@ pub fn launch(launch: Launch) -> eframe::Result<()> {
                 autosaver: Some(Autosaver::new(path.clone())),
                 last_autosave: config.clone(),
                 shutdown,
+                control: control_directory
+                    .map(|(directory, instance)| {
+                        crate::native_mailbox::Mailbox::new(directory, instance, "rekkefly")
+                    })
+                    .transpose()
+                    .map_err(std::io::Error::other)?,
                 config,
                 saved,
                 overrides,
@@ -1257,6 +1266,14 @@ impl Drop for App {
 }
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if let Some(mut mailbox) = self.control.take() {
+            if let Err(error) = mailbox.poll(|command, args| self.control_command(command, args)) {
+                self.status = error;
+            }
+            self.control = Some(mailbox);
+            ctx.request_repaint_after(Duration::from_millis(40));
+        }
+
         if self.shutdown.load(Ordering::Relaxed) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
@@ -1437,6 +1454,21 @@ impl eframe::App for App {
         ));
     }
 }
+
+impl App {
+    fn control_command(
+        &mut self,
+        command: &str,
+        args: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let engine = self
+            .engine
+            .as_ref()
+            .ok_or("Tracker is not running; inspect its native window")?;
+        crate::engine::control_command(engine, command, args).map_err(|e| format!("{e:#}"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1515,6 +1547,7 @@ mod tests {
             screenshot_after: Duration::from_secs(2),
             screenshot_requested: false,
             started: Instant::now(),
+            control: None,
         }
     }
     #[test]
@@ -1587,6 +1620,7 @@ mod tests {
                 screenshot_after: Duration::from_secs(2),
                 screenshot_requested: false,
                 started: Instant::now(),
+                control: None,
             };
             let raw = |events| egui::RawInput {
                 screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(640.0, 480.0))),

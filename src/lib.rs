@@ -12,6 +12,7 @@ pub mod installation;
 pub mod lock;
 pub mod mcp;
 pub mod measurement_log;
+pub mod native_mailbox;
 pub mod output;
 pub mod overlay;
 pub mod persistence;

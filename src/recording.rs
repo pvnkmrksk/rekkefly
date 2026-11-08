@@ -18,9 +18,14 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, Serialize)]
 pub struct RecordingState {
     pub active: bool,
+    /// True only after AVI/timestamp writers and the completion receipt have closed.
+    pub finalized: bool,
+    pub take_id: Option<String>,
+    pub control_stop_id: Option<String>,
+    pub capture_pause_count: u64,
     pub accepted: u64,
     pub written: u64,
     /// Bytes written to video segments so far.
@@ -77,6 +82,9 @@ impl Recorder {
             mpsc::sync_channel::<Arc<GrayFrame>>(config.recording.queue_frames);
         let shared = Arc::new(Mutex::new(RecordingState {
             active: true,
+            take_id: directory
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned()),
             directory: Some(directory),
             ..Default::default()
         }));
@@ -90,6 +98,21 @@ impl Recorder {
                 if let Err(error) = result {
                     state.error = Some(format!("Video recording: {error:#}"));
                 }
+                let mut receipt = state.clone();
+                receipt.finalized = true;
+                let completion = (|| -> Result<()> {
+                    let directory = receipt.directory.as_ref().context("Recording directory missing")?;
+                    let body = serde_json::json!({"schemaVersion":1,"takeId":receipt.take_id,"directory":directory,
+                        "state":if receipt.error.is_none(){"complete"}else{"failed"},"writersDrained":true,
+                        "control_stop_id":receipt.control_stop_id,"capture_pause_count":receipt.capture_pause_count,
+                        "accepted":receipt.accepted,"written":receipt.written,"bytes":receipt.bytes,"error":receipt.error});
+                    let temporary = directory.join("completion.json.writing");
+                    fs::write(&temporary, serde_json::to_vec_pretty(&body)?)?;
+                    fs::rename(temporary, directory.join("completion.json"))?;
+                    Ok(())
+                })();
+                if let Err(error) = completion { state.error = Some(format!("Recording completion receipt: {error:#}")); }
+                state.finalized = true;
             })?;
         Ok(Self {
             sender: Some(sender),
@@ -102,6 +125,17 @@ impl Recorder {
     }
     pub fn accepting(&self) -> bool {
         self.sender.is_some()
+    }
+    pub fn request_owned_stop(&mut self, request_id: String) {
+        if self.accepting() {
+            self.shared.lock().unwrap().control_stop_id = Some(request_id);
+        }
+        self.request_stop();
+    }
+    pub fn capture_paused(&mut self) {
+        if self.accepting() {
+            self.shared.lock().unwrap().capture_pause_count += 1;
+        }
     }
     pub fn request_stop(&mut self) {
         self.sender.take();

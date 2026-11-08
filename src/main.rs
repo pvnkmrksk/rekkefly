@@ -74,6 +74,16 @@ struct Args {
     record: bool,
     #[arg(long, hide = true)]
     supervised: bool,
+    /// Reconnectable local recording control for this native window; no network listener.
+    #[arg(long, requires_all = ["control_instance", "config"], conflicts_with = "supervised")]
+    control_dir: Option<PathBuf>,
+    /// Unique 32-character launch identity for --control-dir.
+    #[arg(long, requires = "control_dir")]
+    control_instance: Option<String>,
+    /// Fail if the requested camera cannot open; never substitute sample/demo input.
+    /// Independent of supervision: closing the launcher does not stop this app.
+    #[arg(long)]
+    no_camera_fallback: bool,
     /// Create a sample configuration at --config and exit (never overwrites).
     #[arg(long)]
     init: bool,
@@ -510,7 +520,24 @@ fn run() -> Result<()> {
         };
         let started = std::time::Instant::now();
         let engine = Engine::start_with(config, config_path, options)?;
+        let mut control = args
+            .control_dir
+            .clone()
+            .zip(args.control_instance.clone())
+            .map(|(directory, instance)| {
+                rekkefly::native_mailbox::Mailbox::new(directory, instance, "rekkefly")
+            })
+            .transpose()
+            .map_err(anyhow::Error::msg)?;
         while !engine.is_finished() {
+            if let Some(mailbox) = &mut control
+                && let Err(error) = mailbox.poll(|command, args| {
+                    rekkefly::engine::control_command(&engine, command, args)
+                        .map_err(|e| format!("{e:#}"))
+                })
+            {
+                eprintln!("Recording mailbox: {error}");
+            }
             if stop.load(Ordering::Relaxed) {
                 engine.stop();
             }
@@ -565,8 +592,8 @@ fn run() -> Result<()> {
             limit: args.frames,
             // A rig launched for an experiment must show its camera error,
             // never a sample that could be mistaken for live data.
-            fallback: !args.supervised,
-            degrade_output: !args.supervised,
+            fallback: !args.supervised && !args.no_camera_fallback,
+            degrade_output: !args.supervised && !args.no_camera_fallback,
             ..Default::default()
         };
         let result = rekkefly::gui::launch(rekkefly::gui::Launch {
@@ -578,6 +605,7 @@ fn run() -> Result<()> {
             screenshot_after: Duration::from_secs_f64(args.screenshot_after.clamp(0.5, 600.0)),
             panels: args.show.clone(),
             shutdown: stop,
+            control_directory: args.control_dir.zip(args.control_instance),
         })
         .map_err(|e| anyhow::anyhow!("GUI: {e}"));
         drop(lock);
@@ -626,6 +654,13 @@ mod tests {
         let a = Args::try_parse_from(["rekkefly", "--device", "1", "--zmq-port", "9900"]).unwrap();
         assert_eq!(a.device.as_deref(), Some("1"));
         assert_eq!(a.zmq_port, Some(9900));
+        let a =
+            Args::try_parse_from(["rekkefly", "--device", "0", "--no-camera-fallback"]).unwrap();
+        assert!(a.no_camera_fallback);
+        assert!(
+            !a.supervised,
+            "strict camera selection must not imply stdin supervision"
+        );
         let a = Args::try_parse_from(["rekkefly", "clip", "in.avi", "out.avi", "--duration", "30"])
             .unwrap();
         assert!(matches!(a.command, Some(Tool::Clip { duration: Some(d), .. }) if d == 30.0));

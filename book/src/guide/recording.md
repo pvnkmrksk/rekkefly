@@ -72,3 +72,22 @@ never change `recording.enabled` in the saved config.
 Recordings open in Rekkefly like any video (`rekkefly recording/video-0000.avi`),
 including recordings cut short by a crash or power loss. MJPEG and raw AVI also
 play in VLC and FFmpeg.
+
+## Experiment-owned recording
+
+Launch Rekkefly with an explicit `--config`, an absolute private
+`--control-dir`, and a random 32-hex-character `--control-instance`. The
+directory's `endpoint.json` identifies the native PID and protocol version 1.
+Its capabilities are `native-gui-control`, `per-take-finalization`, and
+`owned-take-stop-v1`. The filesystem request and reply schema matches
+[HejjéTrac's recording mailbox](https://github.com/pvnkmrksk/hejjetrac/blob/v0.5.2/docs/recording-mailbox.md).
+
+An automated `record_start` uses a fresh absolute root directory and records
+MJPEG inside its reported take directory. Wait for the first accepted frame.
+Send `record_stop` with `expected_directory` set to that take directory or
+its exact launch root, plus a unique 32-hex-character `stop_request_id`.
+Completion reports the same ID as `control_stop_id`, frame counts, and the
+capture pause count. Tracking continues after the recording writers drain.
+The stop command checks that the active recording belongs to that experiment.
+
+Set `--no-camera-fallback` when the experiment requires the configured camera.
