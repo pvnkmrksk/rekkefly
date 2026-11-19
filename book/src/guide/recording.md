@@ -75,6 +75,9 @@ play in VLC and FFmpeg.
 
 ## Experiment-owned recording
 
+Available since **0.6.3**. This controller integration is optional; Rekkefly
+also works independently with the normal GUI and **Record** button.
+
 Launch Rekkefly with an explicit `--config`, an absolute private
 `--control-dir`, and a random 32-hex-character `--control-instance`. The
 directory's `endpoint.json` identifies the native PID and protocol version 1.

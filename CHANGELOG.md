@@ -8,6 +8,8 @@ change behaviour; such changes are listed under **Changed**).
 ## [Unreleased]
 
 ### Documentation
+- Update the website for the published 0.6.3 release: recording-control highlights,
+  verified installer links, release metadata, citation examples and CLI guidance.
 - Link the MATREX VR experiment manual and the companion HejjéTrac/Daari Deepa toolchain, keeping tracker input distinct from experiment telemetry.
 
 ## [0.6.3] - 2026-11-08

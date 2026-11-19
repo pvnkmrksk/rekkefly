@@ -100,12 +100,22 @@
     var asset = card && kind !== "mac" ? assetFor(card) : null;
     // Apple silicon or Intel cannot always be told from a browser: Macs
     // choose from the cards unless the browser said which.
-    button.href = asset ? asset.browser_download_url : "#download";
+    button.href = asset ? asset.browser_download_url : (card && kind !== "mac" ? card.href : "#download");
   }
   function applyRelease() {
     if (!release) return;
     var version = (release.tag_name || "").replace(/^v/, "");
     $$("[data-release-version]").forEach(function (el) { el.textContent = "v" + version; });
+    var metadata = $("#software-metadata");
+    if (metadata && version) {
+      try {
+        var software = JSON.parse(metadata.textContent);
+        software.softwareVersion = version;
+        if (release.published_at) software.dateModified = release.published_at;
+        software.releaseNotes = repoUrl + "/releases/tag/" + encodeURIComponent(release.tag_name);
+        metadata.textContent = JSON.stringify(software, null, 2);
+      } catch (e) { /* Keep the verified release metadata embedded in the page. */ }
+    }
     $$(".dl").forEach(function (card) {
       var asset = assetFor(card);
       if (!asset) return;
@@ -139,7 +149,7 @@
         try { sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), release: release })); } catch (e) {}
         applyRelease();
       })
-      .catch(function () { /* The cards keep linking to the releases page. */ });
+      .catch(function () { /* Keep the verified download links embedded in the page. */ });
   }
   if (names[os]) markMine(os);
   if (os === "mac" && navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {

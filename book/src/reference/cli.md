@@ -35,6 +35,22 @@ These change the run, never the saved config:
 | `--udp-port P` | The local UDP sending port |
 | `--udp-target IP:PORT` | The UDP receiver |
 | `--record` | Record from the start |
+| `--no-camera-fallback` | Require the configured camera to open; report an error instead of substituting sample footage |
+
+## Experiment recording control
+
+Available since 0.6.3. A controller can launch an independent Rekkefly window
+with an explicit config and a private local recording mailbox:
+
+| Option | Meaning |
+| --- | --- |
+| `--control-dir ABSOLUTE_DIR` | Enable the local recording endpoint in this private directory; requires `--config` and `--control-instance` |
+| `--control-instance ID` | A fresh 32-hex-character launch identity supplied by the controller; requires `--control-dir` |
+
+The controller can start and finalize its own take while tracking continues.
+Use `--no-camera-fallback` with a camera config when the experiment requires
+live camera data. See [Experiment-owned recording](../guide/recording.md#experiment-owned-recording)
+for request fields, ownership receipts and take finalization.
 
 ## Exit status
 

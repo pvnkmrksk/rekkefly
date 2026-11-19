@@ -32,6 +32,18 @@ edge it found (thin). The window, with its debug traces, is shown in
 - **Works with agents and scripts.** A built-in [MCP server](guide/agents.md)
   lets an AI agent run rigs, look at the tracking and measure trials, and every
   command has `--json` output.
+- **Records each experiment's own take.** Since 0.6.3, an optional controller
+  can start, stop and finalize its own recording through a private local
+  mailbox while tracking continues ([recording](guide/recording.md#experiment-owned-recording)).
+
+## Current release
+
+[Rekkefly 0.6.3](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.3),
+published 8 November 2026, adds experiment-owned recording and
+`--no-camera-fallback` for runs that require the selected camera. The normal
+GUI and manual recording remain available, with the same wing detector and
+Kinefly-compatible tracking output. See [Install](getting-started/install.md)
+for downloads and the [recording guide](guide/recording.md) for the mailbox contract.
 
 ## Where to start
 
@@ -41,6 +53,7 @@ edge it found (thin). The window, with its debug traces, is shown in
 | Set up a new rig well | [Placing the markers](getting-started/markers.md) and [Tuning a rig](tracking/tuning.md) |
 | Move an existing Kinefly setup | [Coming from Kinefly](kinefly.md) |
 | Connect your experiment | [Receiving measurements](guide/outputs.md) |
+| Record a video take for each trial | [Experiment-owned recording](guide/recording.md#experiment-owned-recording) |
 | Run many arenas | [Several rigs at once](guide/rigs.md) |
 | Let an AI agent run it | [AI agents (MCP)](guide/agents.md) |
 | Know how far to trust it | [The detectors](tracking/detectors.md) and [Evidence](tracking/evidence.md) |

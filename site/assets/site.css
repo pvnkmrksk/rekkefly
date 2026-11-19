@@ -95,6 +95,19 @@ p { margin: 0 0 1em; }
 .icon-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; }
 .icon-btn .moon { fill: currentColor; stroke: none; }
 
+/* Release highlights */
+.hero-release { margin: 12px 0 0; font-size: 0.95rem; font-weight: 600; }
+.release-update { padding: 0 0 56px; scroll-margin-top: calc(var(--nav-h) + 20px); }
+.release-card { display: grid; grid-template-columns: 1fr 1.1fr; gap: 36px; padding: 32px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); }
+.release-card h2 { font-size: clamp(1.65rem, 3vw, 2.15rem); line-height: 1.15; margin-bottom: 16px; }
+.release-card p { color: var(--muted); }
+.release-card .release-date { margin-bottom: 0; font-size: 0.875rem; }
+.release-details ul { margin: 0; padding-left: 20px; display: grid; gap: 14px; }
+.release-details li { color: var(--muted); }
+.release-details strong { color: var(--ink); }
+.release-links { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 24px; font-weight: 600; }
+@media (max-width: 760px) { .release-card { grid-template-columns: 1fr; gap: 24px; padding: 24px; } }
+
 /* Navigation */
 .nav { position: fixed; inset: 0 0 auto; z-index: 50; height: var(--nav-h); transition: background 0.25s, box-shadow 0.25s, border-color 0.25s; border-bottom: 1px solid transparent; }
 .nav.scrolled { background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px); border-bottom-color: var(--line); }
@@ -283,8 +296,8 @@ pre .c { color: #6f8b88; } pre .s { color: #ffb4a6; } pre .k { color: #7cc8d2; }
 .dl-os { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 650; font-size: 0.9rem; }
 .dl-os svg { width: 24px; height: 24px; fill: currentColor; color: var(--ink); }
 .dl b { font-size: 1.2rem; color: var(--ink); }
-.dl-file { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); overflow-wrap: anywhere; }
-.dl-size { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.dl-file { font-family: var(--mono); font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
+.dl-size { font-size: 0.875rem; color: var(--muted); font-weight: 600; }
 .dl-size:empty { display: none; }
 .dl-badge { display: none; position: absolute; top: -11px; right: 16px; background: var(--coral); color: var(--on-coral); font-size: 0.74rem; font-weight: 750; padding: 3px 10px; border-radius: 999px; }
 .dl.mine { border-color: var(--coral); box-shadow: 0 0 0 4px color-mix(in srgb, var(--coral) 14%, transparent), var(--shadow); }
