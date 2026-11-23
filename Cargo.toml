@@ -37,7 +37,7 @@ v4l = { version = "0.14", optional = true }
 
 # A second, independent ZMTP 3 implementation for testing the ZMQ output.
 [dev-dependencies]
-zeromq = { version = "0.6", default-features = false, features = ["tokio-runtime", "tcp-transport"] }
+zeromq = { version = "0.7", default-features = false, features = ["tokio-runtime", "tcp-transport"] }
 tokio = { version = "1", features = ["rt", "sync", "time", "net"] }
 
 # Image codecs are far too slow unoptimized; keep them fast in debug builds

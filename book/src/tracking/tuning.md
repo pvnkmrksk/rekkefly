@@ -43,7 +43,7 @@ you need to reproduce old Kinefly numbers exactly.
 
 | Setting | When |
 | --- | --- |
-| **Invert** off (`dark_on_light = false`) | A bright insect on a dark background (the Bogong moth) |
+| **Bright insect on dark background** (`dark_on_light = false`) | A bright insect on a dark background (the Bogong moth) |
 | **Save BG** and **Subtract background** | A cluttered or uneven background: the tether, arena walls, a gradient. Save the background with the insect *out of view* |
 
 ## 5. Sampling

@@ -111,8 +111,8 @@ The result must match the line for that file in `SHA256SUMS.txt`.
 ## Upgrading
 
 If you downloaded 0.6.1 but its files or `rekkefly --version` say 0.6.0,
-install the current release. That earlier tag preceded its release updates; subsequent releases have the
-correct versioned packages and includes the Unity/NetMQ compatibility fixes.
+install the current release. Version 0.6.2 and later have correctly versioned
+packages and the Unity/NetMQ compatibility fixes.
 
 Install the new version over the old one. Configs, backgrounds and recordings
 are kept. Rekkefly 0.6 replaced Rekke 0.5: on first launch it copies your Rekke

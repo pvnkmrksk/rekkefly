@@ -46,9 +46,10 @@ tick **Settings → Asymmetric wings** to edit them separately.
 
 ## 4. Save a background (optional)
 
-For a cluttered scene, take the insect out and click **Settings → Background →
-Save BG**. Put the insect back and tick **Subtract background**. Rekkefly then tracks the difference from the empty
-scene. With a clean backlit background this is rarely needed.
+For a cluttered scene, take the insect out and click **Save BG** under
+**Settings → Background**. Put the insect back and tick **Subtract background**.
+Rekkefly tracks the difference from that empty scene. With a clean backlit
+background this is rarely needed.
 
 ## 5. Read the angles
 

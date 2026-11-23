@@ -13,6 +13,7 @@ change behaviour; such changes are listed under **Changed**).
 - Redesigned the preview workspace with a wrapping toolbar, scrollable settings
   that dock beside the preview in wide windows, and resizable diagnostics.
 - Show tracking, pause, recording and output status separately in the window.
+- Updated serde_json and the ZeroMQ and Tokio test dependencies.
 
 ### Fixed
 - Keep primary controls and source recovery buttons visible while resizing.
