@@ -8,14 +8,14 @@ is read by GitHub (**Cite this repository**), Zotero and other tools:
 
 ```text
 Kaushik, P. K. Rekkefly: the new Kinefly. Real-time wing tracking for tethered
-insects (version 0.6.4). https://github.com/pvnkmrksk/rekkefly
+insects (version 0.6.5). https://github.com/pvnkmrksk/rekkefly
 ```
 
 ```bibtex
 @software{rekkefly,
   author  = {Kaushik, Pavan Kumar},
   title   = {Rekkefly: the new Kinefly. Real-time wing tracking for tethered insects},
-  version = {0.6.4},
+  version = {0.6.5},
   url     = {https://github.com/pvnkmrksk/rekkefly},
   license = {MIT}
 }

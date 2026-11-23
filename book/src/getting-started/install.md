@@ -17,9 +17,9 @@ line (Apple M1, M2, …) means Apple silicon; a "Processor" line (Intel) means I
 Every package includes the [Bogong moth example](bogong-moth.md), the example
 configs and the example receivers in Python.
 
-The current stable release is **0.6.4**. See the
-[release notes](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.4)
-and the [window guide](../guide/app.md) for the resizable layout.
+The current stable release is **0.6.5**. See the
+[release notes](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.5)
+and the [camera guide](../guide/cameras.md) for macOS camera mode selection.
 
 ## Mac
 

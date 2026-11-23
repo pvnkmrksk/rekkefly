@@ -51,6 +51,11 @@ scales the image to the processing size **without changing its aspect ratio**:
 stretching would bias every angle. Cameras that offer grayscale modes are used
 in grayscale directly, which saves a conversion.
 
+On macOS, Rekkefly 0.6.5 and later read the device's available modes before
+opening the stream. If AVFoundation rejects a listed mode, Rekkefly tries
+the next ranked mode. The reported source shows the size and frame rate the
+camera opened with.
+
 Tracking processes **every** frame the camera delivers. The GUI preview is
 drawn at `preview_fps` (40 by default), independently.
 

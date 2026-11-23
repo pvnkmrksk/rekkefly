@@ -38,10 +38,9 @@ edge it found (thin). The window, with its debug traces, is shown in
 
 ## Current release
 
-[Rekkefly 0.6.4](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.4)
-adds a resizable workspace with a wrapping toolbar, docked settings and
-diagnostic plots that scale with the window. See the [window guide](guide/app.md) for the
-layout and [Install](getting-started/install.md) for downloads.
+[Rekkefly 0.6.5](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.5)
+fixes direct macOS camera startup when AVFoundation rejects an advertised mode.
+See the [camera guide](guide/cameras.md) and [Install](getting-started/install.md).
 
 ## Where to start
 

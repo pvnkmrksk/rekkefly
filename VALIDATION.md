@@ -1,6 +1,64 @@
-# Validation — Rekkefly 0.6.2
+# Rekkefly validation
 
-This file records what was checked for this release, how, and what still needs checking. The GitHub workflow repeats the automated checks on Ubuntu, Windows, macOS Apple silicon and macOS Intel before any release is published.
+This file records what was checked across releases and how. The GitHub workflow repeats the automated checks on Ubuntu, Windows, macOS Apple silicon and macOS Intel before any release is published.
+
+## 0.6.5 direct macOS camera and MATREX VR
+
+On 23 November 2026, an arm64 release build opened a physical FaceTime HD
+camera directly through AVFoundation at 640×480 YUYV and 30 fps. A strict
+12-frame preflight requested 15 fps and selected the supported 30 fps mode.
+To repeat the preflight with a test camera config, run:
+
+```sh
+rekkefly --config /absolute/path/to/camera.toml --no-camera-fallback \
+  --headless --frames 12 --json
+```
+
+MATREX VR 0.5.26-dev then launched the signed build with that camera selected
+and camera fallback disabled. It observed fresh tracking and acknowledged the
+first frames of its own take. Stop finalized and archived the take with the
+matching run and stop IDs. The AVI contained all 90 accepted frames. Rekkefly
+decoded them with its native AVI reader, and the archive held byte-identical
+copies of the native AVI and completion receipt. The same tracker advanced
+from 122 to 183 frames after Stop, with 62 new UDP measurements observed and
+the completed take still at 90 frames. No FFmpeg process was used for capture
+or verification. The live test used an isolated desktop rig with the built-in
+camera and no calibrated animal setup.
+
+## 0.6.4 live camera and MATREX VR
+
+On 23 November 2026, the published macOS arm64 portable executable ran two
+MATREX VR 0.5.26-dev experiments with a physical FaceTime HD camera. Direct
+capture failed after macOS granted access because v0.6.4 selected an unsupported
+1920×1080 at 15 fps mode. FFmpeg captured the camera at 30 fps over loopback.
+MATREX VR matched each take to its own run and saved 88 and 89 frames in separate
+archives. After Stop in the second run, the same tracker advanced from 339 to
+401 frames while the saved take stayed at 89 frames.
+
+To repeat the check, use a separate MATREX config, data and control directory
+and one unused rig. Select the published Rekkefly executable, enable tracker
+video and set `recordingControl` to `Experiment`. First try a camera source
+with `--no-camera-fallback` in Rekkefly. If the FaceTime camera rejects the
+mode above, use a test copy of the portable folder with FFmpeg on the path or
+an `ffmpeg` symlink beside the executable. Confirm the camera index locally,
+then run this producer on a free loopback port:
+
+```sh
+ffmpeg -nostdin -f avfoundation -framerate 30 -video_size 1920x1080 \
+  -pixel_format uyvy422 -i '0:none' -an -vf scale=640:360 -pix_fmt yuv420p \
+  -c:v libx264 -preset ultrafast -tune zerolatency -g 15 -threads 2 \
+  -f mpegts 'tcp://127.0.0.1:18554?listen=1'
+```
+
+For the bridged test, set Rekkefly's source to `network` with URL
+`tcp://127.0.0.1:18554` and set the input rate to 30 fps. Point MATREX at the
+rig's Rekkefly ZMQ port and wait for fresh input before pressing Start. Confirm
+that MATREX acknowledges the first recorded frame. After Stop, compare the
+run and take IDs in `native_recording_control.jsonl` with the clip's tracker
+session ID in `media_manifest.json`. In the archive's `completion.json`, check
+the stop ID, `writersDrained` and equal `accepted` and `written` counts. Use
+`ffprobe -count_frames` to verify the AVI and `examples/receive_udp.py` on a
+test UDP port to confirm advancing frame sequences after Stop.
 
 ## 0.6.1 and 0.6.2: ZeroMQ subscribers
 
@@ -83,10 +141,10 @@ Processing only, 640×480, two wings, 240 × 72 samples, 4-core cloud VM. 0.5.1 
 
 MJPEG encoding of a 640×480 grayscale frame at quality 90 takes about 2 ms on one core; the recorder spreads encoding across threads when frames queue up. Native MJPEG playback with tracking ran at 800–1,000 frames/s on the moth (`rekkefly track`). The robust detector took about 340 µs per moth frame (99% under 0.7 ms), the classic about 210 µs.
 
-## Not yet verified
+## Outside the verified scope
 
-- **Physical cameras.** No camera was attached during development. The Linux fix lists only `V4L2_CAP_VIDEO_CAPTURE` nodes, sorted by number, and tries them in order. It was checked against the nokhwa/v4l source and by unit tests of the selection logic, not on hardware. Please confirm `rekkefly --list-cameras` and `device = "auto"` on your rig.
-- macOS and Windows camera capture, and the installers, are exercised only by CI smoke tests, which have no camera.
+- Native camera capture on Linux and Windows has no physical-device result in this record. The Linux fix lists only `V4L2_CAP_VIDEO_CAPTURE` nodes, sorted by number, and tries them in order. Source inspection and unit tests cover that selection logic.
+- The macOS live-camera checks cover a FaceTime HD camera on Apple silicon. Other camera models, Intel camera hardware and calibrated animal rigs need their own checks. Installer CI runs use prerecorded or generated input.
 - Wingbeat-frequency estimation and stopped-flight detection are not implemented.
 
 ## Earlier releases

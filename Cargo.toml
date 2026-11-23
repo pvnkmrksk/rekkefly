@@ -1,6 +1,6 @@
 [package]
 name = "rekkefly"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2024"
 description = "Rekkefly, the new Kinefly: real-time wing tracking for tethered insects, with Kinefly-compatible ZMQ output"
 keywords = ["kinefly", "insect-flight", "drosophila", "wing-tracking", "neuroscience"]
@@ -14,7 +14,7 @@ readme = "README.md"
 [features]
 default = ["gui", "camera"]
 gui = ["dep:eframe"]
-camera = ["dep:nokhwa", "dep:v4l"]
+camera = ["dep:nokhwa", "dep:nokhwa-bindings-macos", "dep:v4l"]
 
 [dependencies]
 anyhow = "1"
@@ -34,6 +34,9 @@ zune-core = "0.5"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 v4l = { version = "0.14", optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+nokhwa-bindings-macos = { version = "0.2.4", optional = true }
 
 # A second, independent ZMTP 3 implementation for testing the ZMQ output.
 [dev-dependencies]

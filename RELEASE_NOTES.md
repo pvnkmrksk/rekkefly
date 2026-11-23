@@ -1,13 +1,11 @@
-## 0.6.4 — Resizable tracking workspace
+## 0.6.5 — Direct macOS camera capture
 
-- Start or stop acquisition, record video, save settings and open diagnostics
-  from a toolbar that wraps as the window narrows.
-- Settings dock beside the preview in wide windows and open in a scrollable
-  workspace in compact windows.
-- MATREX VR's recording client was verified against the native window. It can
-  start a take, wait for the first frame and stop the matching take. The
-  completion receipt confirms that the writer closed and all accepted frames
-  were saved.
+Rekkefly now reads a macOS camera's available modes before opening it. If
+AVFoundation rejects a listed mode, Rekkefly tries the next ranked mode.
 
-[Window guide](https://pvnkmrksk.github.io/rekkefly/docs/guide/app.html) ·
+On Apple silicon, a physical FaceTime HD camera opened directly at 640×480
+and 30 fps. MATREX VR started the experiment, archived all 90 frames from
+its own take on Stop, and the same tracker kept sending measurements afterward.
+
+[Camera guide](https://pvnkmrksk.github.io/rekkefly/docs/guide/cameras.html) ·
 [Recording guide](https://pvnkmrksk.github.io/rekkefly/docs/guide/recording.html#experiment-owned-recording)

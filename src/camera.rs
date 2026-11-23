@@ -108,12 +108,14 @@ fn describe(cameras: &[CameraEntry]) -> String {
 mod native {
     use super::*;
     use crate::frame::{GrayFrame, unix_ns};
+    #[cfg(not(target_os = "macos"))]
+    use nokhwa::utils::Resolution;
     use nokhwa::{
         Camera,
         pixel_format::RgbFormat,
         utils::{
             CameraFormat, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType,
-            Resolution, frame_formats,
+            frame_formats,
         },
     };
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -222,6 +224,52 @@ mod native {
         ranked.dedup();
         ranked
     }
+    #[cfg(target_os = "macos")]
+    pub(super) fn try_camera_modes<T>(
+        modes: impl IntoIterator<Item = CameraFormat>,
+        mut open: impl FnMut(CameraFormat) -> Result<T>,
+    ) -> Result<T> {
+        let mut errors = Vec::new();
+        for mode in modes {
+            match open(mode) {
+                Ok(camera) => return Ok(camera),
+                Err(error) => errors.push(format!("{mode}: {error:#}")),
+            }
+        }
+        ensure!(!errors.is_empty(), "Camera advertised no usable modes");
+        bail!("{}", errors.join("; "))
+    }
+
+    #[cfg(target_os = "macos")]
+    fn open_one(
+        entry: &CameraEntry,
+        width: u32,
+        height: u32,
+        fps: u32,
+    ) -> Result<(Camera, CameraFormat)> {
+        let index = if entry.id.is_empty() {
+            CameraIndex::Index(entry.backend_index)
+        } else {
+            CameraIndex::String(entry.id.clone())
+        };
+        // Camera::new(None) applies the first listed mode immediately. On a
+        // FaceTime camera that can be a range minimum the backend rejects.
+        // Enumerate without configuring the device, then construct each exact mode.
+        let formats = nokhwa_bindings_macos::AVCaptureDevice::new(&index)
+            .and_then(|device| device.supported_formats())
+            .context("Enumerate AVFoundation camera modes")?;
+        try_camera_modes(rank(&formats, width, height, fps), |mode| {
+            let request =
+                RequestedFormat::with_formats(RequestedFormatType::Exact(mode), frame_formats());
+            let mut camera =
+                Camera::new(index.clone(), request).context("Configure camera mode")?;
+            camera.open_stream().context("Open camera stream")?;
+            let actual = camera.camera_format();
+            Ok((camera, actual))
+        })
+    }
+
+    #[cfg(not(target_os = "macos"))]
     fn open_one(
         entry: &CameraEntry,
         width: u32,
@@ -512,5 +560,28 @@ mod tests {
         assert_eq!(ranked[1], f(640, 480, FrameFormat::MJPEG, 30));
         let ranked = native::rank(&modes, 800, 600, 60);
         assert_eq!(ranked[0].resolution(), Resolution::new(1280, 720));
+    }
+
+    #[cfg(all(feature = "camera", target_os = "macos"))]
+    #[test]
+    fn rejected_macos_mode_is_followed_by_the_next_ranked_mode() {
+        use nokhwa::utils::{CameraFormat, FrameFormat, Resolution};
+        let resolution = Resolution::new(1920, 1080);
+        let rejected = CameraFormat::new(resolution, FrameFormat::YUYV, 15);
+        let supported = CameraFormat::new(resolution, FrameFormat::YUYV, 30);
+        let mut attempted = Vec::new();
+        let opened = native::try_camera_modes(
+            native::rank(&[supported, rejected], 1920, 1080, 15),
+            |mode| {
+                attempted.push(mode);
+                if mode == rejected {
+                    anyhow::bail!("camera constructor rejected the range minimum");
+                }
+                Ok(mode)
+            },
+        )
+        .unwrap();
+        assert_eq!(attempted, [rejected, supported]);
+        assert_eq!(opened, supported);
     }
 }

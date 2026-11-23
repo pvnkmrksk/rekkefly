@@ -7,6 +7,12 @@ change behaviour; such changes are listed under **Changed**).
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-23
+
+### Fixed
+- macOS camera startup now enumerates device modes before opening the stream
+  and retries the next ranked mode if AVFoundation rejects a setting.
+
 ## [0.6.4] - 2026-11-23
 
 ### Changed
