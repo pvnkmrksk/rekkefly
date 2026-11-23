@@ -92,5 +92,12 @@ its exact launch root, plus a unique 32-hex-character `stop_request_id`.
 Completion reports the same ID as `control_stop_id`, frame counts, and the
 capture pause count. Tracking continues after the recording writers drain.
 The stop command checks that the active recording belongs to that experiment.
+MATREX VR waits for `completion.json` with the matching stop ID, drained writers
+and equal accepted and written frame counts. The `start` and `pause` commands
+control acquisition. `record_start` and `record_stop` control the video take.
 
 Set `--no-camera-fallback` when the experiment requires the configured camera.
+
+Run the mailbox regression with `cargo test --locked --test instances experiment_mailbox`.
+It uses the simulated input and temporary directories, so it needs no camera
+or Unity installation.

@@ -17,10 +17,9 @@ line (Apple M1, M2, …) means Apple silicon; a "Processor" line (Intel) means I
 Every package includes the [Bogong moth example](bogong-moth.md), the example
 configs and the example receivers in Python.
 
-The current stable release is **0.6.3**, published 8 November 2026. It adds
-optional experiment-owned recording and a flag to require the configured
-camera. See the [release notes](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.3)
-and [recording guide](../guide/recording.md#experiment-owned-recording).
+The current stable release is **0.6.4**. See the
+[release notes](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.4)
+and the [window guide](../guide/app.md) for the resizable layout.
 
 ## Mac
 
@@ -112,7 +111,7 @@ The result must match the line for that file in `SHA256SUMS.txt`.
 ## Upgrading
 
 If you downloaded 0.6.1 but its files or `rekkefly --version` say 0.6.0,
-install 0.6.3. That earlier tag preceded its release updates; 0.6.3 has the
+install the current release. That earlier tag preceded its release updates; subsequent releases have the
 correct versioned packages and includes the Unity/NetMQ compatibility fixes.
 
 Install the new version over the old one. Configs, backgrounds and recordings

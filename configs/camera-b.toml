@@ -39,7 +39,7 @@ angle_bins = 240
 radial_samples = 72
 # true: dark insect on a light (backlit) background; false: bright insect on dark.
 dark_on_light = true
-# Track the difference from a saved empty-scene image ("Save BG" in the toolbar).
+# Track the difference from a saved empty-scene image (Settings → Background → Save BG).
 subtract_background = false
 background_path = "rig-b.background.png"
 

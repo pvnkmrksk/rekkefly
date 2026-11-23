@@ -1,10 +1,13 @@
-## 0.6.3 — Experiment-owned recording
+## 0.6.4 — Resizable tracking workspace
 
-Rekkefly can be installed and used independently. A controller can optionally launch it with a private local recording mailbox, start a dedicated video take, and stop that exact take while flight tracking continues. The mailbox uses the same protocol version, command fields and ownership receipts as HejjéTrac.
+- Start or stop acquisition, record video, save settings and open diagnostics
+  from a toolbar that wraps as the window narrows.
+- Settings dock beside the preview in wide windows and open in a scrollable
+  workspace in compact windows.
+- MATREX VR's recording client was verified against the native window. It can
+  start a take, wait for the first frame and stop the matching take. The
+  completion receipt confirms that the writer closed and all accepted frames
+  were saved.
 
-- Use `--control-dir` with `--control-instance` and an explicit configuration to enable the endpoint.
-- `--no-camera-fallback` requires the selected live camera when using a camera configuration.
-- Normal GUI and manual recording workflows remain available.
-- The wing detector and legacy tracking output are unchanged.
-
-[Recording mailbox contract](https://github.com/pvnkmrksk/rekkefly/blob/v0.6.3/book/src/guide/recording.md)
+[Window guide](https://pvnkmrksk.github.io/rekkefly/docs/guide/app.html) ·
+[Recording guide](https://pvnkmrksk.github.io/rekkefly/docs/guide/recording.html#experiment-owned-recording)

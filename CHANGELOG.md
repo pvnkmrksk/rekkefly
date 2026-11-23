@@ -7,6 +7,16 @@ change behaviour; such changes are listed under **Changed**).
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-23
+
+### Changed
+- Redesigned the preview workspace with a wrapping toolbar, scrollable settings
+  that dock beside the preview in wide windows, and resizable diagnostics.
+- Show tracking, pause, recording and output status separately in the window.
+
+### Fixed
+- Keep primary controls and source recovery buttons visible while resizing.
+
 ### Documentation
 - Update the website for the published 0.6.3 release: recording-control highlights,
   verified installer links, release metadata, citation examples and CLI guidance.

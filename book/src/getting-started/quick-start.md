@@ -40,14 +40,14 @@ Each sector is an annulus around its hinge. Set the **inner radius just past
 the body** and keep the **outer radius inside the wing blur**. The angular
 limits should cover the whole stroke with a little margin, while staying clear
 of the body, the legs and the head. The wings mirror each other while you edit;
-tick **Asymmetric** to edit them separately.
+tick **Settings → Asymmetric wings** to edit them separately.
 
 [Placing the markers](markers.md) explains each choice, with pictures.
 
 ## 4. Save a background (optional)
 
-For a cluttered scene, take the insect out, click **Save BG**, put the insect
-back and tick **Subtract**. Rekkefly then tracks the difference from the empty
+For a cluttered scene, take the insect out and click **Settings → Background →
+Save BG**. Put the insect back and tick **Subtract background**. Rekkefly then tracks the difference from the empty
 scene. With a clean backlit background this is rarely needed.
 
 ## 5. Read the angles
@@ -75,7 +75,7 @@ receivers in other languages.
 
 ## 6. Check the tracking
 
-Open **Settings → Show signal diagnostics**. Watch L − R while the insect
+Click **Diagnostics**. Watch L − R while the insect
 flies: it should be smooth, without spikes when the legs move. The angular
 profile panel shows exactly which edge was chosen. If something looks wrong,
 [Tuning a rig](../tracking/tuning.md) walks through the fixes.

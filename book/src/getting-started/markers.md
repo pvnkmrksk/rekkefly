@@ -71,7 +71,7 @@ it all pass through one point, and that point is the hinge. (For the Bogong
 moth example, lines fitted to 190 frames of one wing passed within 0.7 px of one
 point; see [The Bogong moth example](bogong-moth.md).)
 
-While **Asymmetric** is off, the wings mirror each other across the body axis:
+While **Asymmetric wings** is off, the wings mirror each other across the body axis:
 drag one hinge and the other follows. Turn it on for insects that sit at an
 angle or rigs where the two wings look different.
 
@@ -124,7 +124,7 @@ clockwise positive in the image.
 3. The inner radius is just past the body: no part of the thorax inside the sector.
 4. The outer radius ends inside the wing blur.
 5. The sectors cover the full stroke, plus a few degrees, and miss the legs and antennae.
-6. With **Settings → Show signal diagnostics**, L − R is smooth while the insect flies.
+6. With **Diagnostics**, L − R is smooth while the insect flies.
 
 Agents can do the same check: the MCP `snapshot` tool returns the frame with
 the sectors and edges drawn on it ([AI agents](../guide/agents.md)).

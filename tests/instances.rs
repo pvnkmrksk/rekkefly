@@ -1,5 +1,16 @@
-use rekkefly::{config::Config, engine::Engine, tracker::Measurement};
-use std::{net::UdpSocket, path::PathBuf, time::Duration};
+use rekkefly::{
+    config::Config,
+    engine::{Engine, control_command},
+    native_mailbox::Mailbox,
+    tracker::Measurement,
+};
+use serde_json::{Value, json};
+use std::{
+    fs,
+    net::UdpSocket,
+    path::{Path, PathBuf},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
 fn sender_address() -> String {
     let s = UdpSocket::bind("127.0.0.1:0").unwrap();
     s.local_addr().unwrap().to_string()
@@ -175,4 +186,109 @@ fn video_recording_can_start_stop_and_restart_without_reopening_capture() {
             .count(),
         2
     );
+}
+
+#[test]
+fn experiment_mailbox_stops_only_its_take_and_proves_finalization() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut config = Config::demo();
+    config.output.enabled = false;
+    let engine = Engine::start(config, temp.path().join("rig.toml"), None).unwrap();
+    let directory = temp.path().join("control");
+    let instance = "00000000000000000000000000000001".to_owned();
+    let mut mailbox = Mailbox::new(directory.clone(), instance.clone(), "rekkefly").unwrap();
+    let mut sequence = 0;
+    let mut call = |command: &str, args: Value| {
+        sequence += 1;
+        let id = format!("{sequence:032x}");
+        let request = directory.join(format!("{id}.request.json"));
+        let response = directory.join(format!("{id}.response.json"));
+        let expires = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + 5000;
+        fs::write(
+            request,
+            json!({
+                "id": id, "instance": instance, "command": command, "args": args,
+                "expiresUtcMilliseconds": expires,
+            })
+            .to_string(),
+        )
+        .unwrap();
+        mailbox
+            .poll(|command, args| {
+                control_command(&engine, command, args).map_err(|e| format!("{e:#}"))
+            })
+            .unwrap();
+        let reply: Value = serde_json::from_slice(&fs::read(&response).unwrap()).unwrap();
+        fs::remove_file(response).unwrap();
+        assert_eq!(reply["ok"], true, "{reply}");
+        assert_eq!(reply["instance"], instance);
+        assert_eq!(reply["result"]["queued"], command != "status");
+        reply["result"].clone()
+    };
+    let wait = |call: &mut dyn FnMut(&str, Value) -> Value, ready: &dyn Fn(&Value) -> bool| {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let status = call("status", json!({}));
+            assert_eq!(status["ended"], false, "{status}");
+            assert!(status["error"].is_null(), "{status}");
+            if ready(&status) {
+                break status;
+            }
+            assert!(Instant::now() < deadline, "Last status: {status}");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    };
+
+    call("pause", json!({}));
+    wait(&mut call, &|status| status["paused"] == true);
+    let root = temp.path().join("take");
+    call(
+        "record_start",
+        json!({"directory": root, "record_options": {"raw": true, "debug": false}, "recording_tuning": {"encoding": "mjpeg"}}),
+    );
+    let armed = wait(&mut call, &|status| status["recording"]["active"] == true);
+    assert_eq!(armed["recording"]["accepted"], 0);
+    let take = Path::new(armed["recording"]["directory"].as_str().unwrap());
+    assert_eq!(take.parent(), Some(root.as_path()));
+    let receipt_path = take.join("completion.json");
+    assert!(!receipt_path.exists());
+
+    call("start", json!({}));
+    wait(&mut call, &|status| {
+        status["recording"]["accepted"].as_u64().unwrap() >= 3
+    });
+    let wrong_stop = "00000000000000000000000000000002";
+    call(
+        "record_stop",
+        json!({"expected_directory": temp.path().join("other-take"), "stop_request_id": wrong_stop}),
+    );
+    let still_active = wait(&mut call, &|status| status["command_error"].is_string());
+    assert_eq!(still_active["recording"]["active"], true);
+    assert!(!receipt_path.exists());
+
+    let stop = "00000000000000000000000000000003";
+    call(
+        "record_stop",
+        json!({"expected_directory": take, "stop_request_id": stop}),
+    );
+    let finalized = wait(&mut call, &|status| {
+        status["recording"]["finalized"] == true
+    });
+    let receipt: Value = serde_json::from_slice(&fs::read(receipt_path).unwrap()).unwrap();
+    assert_eq!(receipt["state"], "complete");
+    assert_eq!(receipt["control_stop_id"], stop);
+    assert_eq!(receipt["capture_pause_count"], 0);
+    assert_eq!(receipt["writersDrained"], true);
+    assert_eq!(receipt["accepted"], receipt["written"]);
+    assert!(receipt["accepted"].as_u64().unwrap() >= 3);
+    assert!(take.join("video-0000.avi").is_file());
+    let frames = finalized["frames"].as_u64().unwrap();
+    wait(&mut call, &|status| {
+        status["frames"].as_u64().unwrap() > frames
+    });
+    engine.wait();
 }

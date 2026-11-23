@@ -38,12 +38,10 @@ edge it found (thin). The window, with its debug traces, is shown in
 
 ## Current release
 
-[Rekkefly 0.6.3](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.3),
-published 8 November 2026, adds experiment-owned recording and
-`--no-camera-fallback` for runs that require the selected camera. The normal
-GUI and manual recording remain available, with the same wing detector and
-Kinefly-compatible tracking output. See [Install](getting-started/install.md)
-for downloads and the [recording guide](guide/recording.md) for the mailbox contract.
+[Rekkefly 0.6.4](https://github.com/pvnkmrksk/rekkefly/releases/tag/v0.6.4)
+adds a resizable workspace with a wrapping toolbar, docked settings and
+diagnostic plots that scale with the window. See the [window guide](guide/app.md) for the
+layout and [Install](getting-started/install.md) for downloads.
 
 ## Where to start
 

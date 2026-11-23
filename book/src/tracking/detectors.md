@@ -1,7 +1,7 @@
 # The detectors
 
 Rekkefly has two wing detectors. The **robust** detector (`method = "wing_blur"`,
-**Ignore legs** in the toolbar) is the default. The **classic** detector
+**Ignore legs and antennae** in Settings) is the default. The **classic** detector
 (`method = "edge"`) is Kinefly's approach, kept for comparison and for existing
 setups.
 

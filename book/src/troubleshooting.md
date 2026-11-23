@@ -34,7 +34,7 @@ Find your symptom below. If it is not here, search the
 | Problem | Fix |
 | --- | --- |
 | **L − R is noisy or spiky** | Put the hinges on the wing bases, the inner radius just past the body and the outer radius inside the blur. Keep the sectors off the body, legs and head. Watch the debug traces while you adjust ([tuning](tracking/tuning.md)) |
-| **The edge jumps to a leg** | Make sure **Ignore legs** is ticked (`method = "wing_blur"`). Increase `spike_width_deg` for thick legs |
+| **The edge jumps to a leg** | Make sure **Ignore legs and antennae** is ticked (`method = "wing_blur"`). Increase `spike_width_deg` for thick legs |
 | **The angle sits at the sector's limit** | The stroke goes beyond the sector: widen the span |
 | **The angle is reported while the insect is not flying** | Raise `threshold` above the strength of the background noise (see the **peak** value in Settings) |
 | **Angles look inverted or wrong on a bright insect** | Untick **Invert** (`dark_on_light = false`) for a bright insect on a dark background |

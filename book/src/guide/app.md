@@ -2,56 +2,57 @@
 
 ![The Rekkefly window tracking the Bogong moth, with the debug traces open](../images/main-window.png)
 
-The window shows the camera image with the markers, the latest angles at the
-lower left and a toolbar along the top. The title shows the rig's label, its
-source and its ZMQ port, so you can tell several windows apart.
+The preview shows the camera image, draggable markers and live angle readouts.
+The title shows the rig's label, source and ZMQ port. The footer shows capture
+speed, output and recording status. Hover over a warning to read its details.
 
 ## Toolbar
 
 | Control | What it does |
 | --- | --- |
-| **Save BG** | Saves the next frame as the background image. Capture an *empty* scene first |
-| **H A L R** | Turns tracking of the head, abdomen, left and right wing on or off |
-| **Asymmetric** | Edits each wing on its own instead of mirroring |
-| **Subtract** | Tracks the difference from the saved background |
-| **Invert** | For a bright insect on a dark background; the preview is inverted too |
-| **Threshold L / R** | 0 reports the strongest edge, however faint. Raise it to reject noise. Applies live |
-| **Ignore legs** | The robust wing detector, on by default ([why](../tracking/detectors.md)) |
+| **Start / Stop** | Starts or stops acquisition |
 | **Record** | Starts and stops video recording ([formats](recording.md)) |
+| **Save** | Saves this rig's configuration |
+| **Settings** | Opens tracking, camera, output and recording controls |
+| **Diagnostics** | Shows the angle traces and the selected region's angular profile |
 | **New window** | Opens another Rekkefly window for the next rig, with its own camera and ports |
-| **Settings** | Detector, precise geometry, camera, outputs, recording and sampling |
+
+The toolbar wraps in narrow windows. **Settings** sits beside the preview in a
+wide window and uses the workspace in a compact window. Click **Settings**
+again to return to the preview and any open diagnostics.
 
 ## Editing markers
 
 Drag the dots; see [Placing the markers](../getting-started/markers.md). The
-wings mirror each other until **Asymmetric** is on. Edits apply to the very
+wings mirror each other until **Asymmetric wings** is on. Edits apply to the very
 next frame.
 
 ## Settings
 
-![The Settings window](../images/settings.png)
+![Settings docked beside the camera preview](../images/settings.png)
 
-The Settings window has a part selector (**Left**, **Right**, **Head**,
-**Abdomen**), the selected part's detector and geometry, and five sections:
+Use the **Track and draw** checkboxes to enable tracking and overlays by body
+part. **Asymmetric wings** allows independent wing edits. For a brightly lit
+insect against a dark background, enable **Bright insect on dark background**.
+**Ignore legs and antennae** selects the robust wing detector for both wings.
 
 | Section | Contents |
 | --- | --- |
-| *Selected part* | **Detector** (robust, classic, centroid), **Ignore features narrower than** and **Contrast cap** for the robust detector, **Primary edge**, **Threshold**, hinge X/Y, start and span, inner and outer radius, **Max edges**. Below them, **Show signal diagnostics** and the live peak and selected edge strengths |
-| **Background** | Whether a background is loaded, **Load saved background**, and the background file's path |
+| **Detector and markers** | Select **Left**, **Right**, **Head** or **Abdomen** to edit its detector, edge, threshold and geometry and see the live edge strength |
+| **Background** | **Save BG**, **Load saved background**, subtraction and difference preview. Capture an empty scene for the reference image |
 | **Camera / input** | The source: a camera (with a list of cameras), a video file, a network stream or the simulated fly. **Back to saved source** and **Save as this config's source** for a video opened for one run |
 | **Instance / output** | The instance label, the ZMQ publisher and its bind address, the UDP output's sending and receiving addresses, and the JSONL file |
 | **Video / saved state** | **Automatically save configuration**, the recording folder, format, MJPEG quality, write queue and file size |
 | **Sampling** | Angular bins, radial samples and the preview frame rate |
 
-At the bottom: **Restart acquisition** applies source, label and output
+At the top, **Restart acquisition** applies source, label and output
 changes, and **Reload config** discards unsaved edits by reading the file
 again. Greyed fields are set for this run by the command line or the rig
 launcher, and cannot be changed here.
 
 ## Debug traces
 
-Tick **Settings → Show signal diagnostics**, or start with `--show plots`. Two
-panels appear below the image:
+Click **Diagnostics**, or start with `--show plots`, to see two plots below the image.
 
 - **Wing angles · last 8 s**: left (red), right (green) and **L − R** (white),
   from −90° to +90°. Spikes in L − R that the insect did not make are a sign of

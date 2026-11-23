@@ -75,10 +75,10 @@ This README is the tour. The [documentation](https://pvnkmrksk.github.io/rekkefl
 
 | Computer | Download | Install |
 | --- | --- | --- |
-| Mac, Apple silicon (M1 and later) | `Rekkefly-0.6.3-macos-arm64.dmg` | Open it and drag **Rekkefly** onto **Applications** |
-| Mac, Intel | `Rekkefly-0.6.3-macos-x64.dmg` | Open it and drag **Rekkefly** onto **Applications** |
-| Windows 10/11 | `Rekkefly-0.6.3-windows-x64-setup.exe` | Run it. No administrator rights needed |
-| Ubuntu 22.04 or newer | `rekkefly_0.6.3_amd64.deb` | `sudo apt install ./rekkefly_0.6.3_amd64.deb` |
+| Mac, Apple silicon (M1 and later) | `Rekkefly-0.6.4-macos-arm64.dmg` | Open it and drag **Rekkefly** onto **Applications** |
+| Mac, Intel | `Rekkefly-0.6.4-macos-x64.dmg` | Open it and drag **Rekkefly** onto **Applications** |
+| Windows 10/11 | `Rekkefly-0.6.4-windows-x64-setup.exe` | Run it. No administrator rights needed |
+| Ubuntu 22.04 or newer | `rekkefly_0.6.4_amd64.deb` | `sudo apt install ./rekkefly_0.6.4_amd64.deb` |
 
 On a Mac, the first launch may be blocked because the app is not notarized. See [Mac: first launch](#mac-first-launch).
 
@@ -96,7 +96,7 @@ On a Mac, the first launch may be blocked because the app is not notarized. See 
 | Middle dots on an arc | Only the inner or outer radius |
 | White centre dot | Moves the whole setup |
 
-Each sector is an annulus around its hinge. Set the **inner radius just past the body**, so the hinge region itself is not tracked, and keep the **outer radius inside the wing blur**. The angular limits should cover the whole stroke with a little margin, while staying clear of the body, the legs and the head. The two wings mirror each other while you edit. Tick **Asymmetric** to edit them separately.
+Each sector is an annulus around its hinge. Set the **inner radius just past the body**, so the hinge region itself is not tracked, and keep the **outer radius inside the wing blur**. The angular limits should cover the whole stroke with a little margin, while staying clear of the body, the legs and the head. The two wings mirror each other while you edit. Tick **Asymmetric wings** to edit them separately.
 
 **4. Read the angles.** The lower-left box shows the left and right wing angles and L − R in radians. The same values are published continuously on **ZMQ port 9871** and over UDP ([how to receive them](#receiving-measurements)).
 
@@ -161,26 +161,20 @@ Rekkefly keeps Kinefly's geometry and conventions: annular sectors, angles measu
 
 ![Rekkefly tracking the Bogong moth with the debug traces open](docs/images/main-window.png)
 
-**Toolbar**
+Use **Start / Stop** for acquisition, **Record** for video and **Save** for the
+rig configuration. **Diagnostics** opens the angle traces. **Settings** opens
+tracking and input controls beside the preview in wide windows and takes over
+that space in narrow windows. The toolbar wraps as the window shrinks.
 
-| Control | What it does |
-| --- | --- |
-| **Save BG** | Saves the next frame as the background image. Capture an *empty* scene first |
-| **H A L R** | Turns tracking of the head, abdomen, left and right wing on or off |
-| **Asymmetric** | Edits each wing on its own instead of mirroring |
-| **Subtract** | Tracks the difference from the saved background |
-| **Invert** | For a bright insect on a dark background; the preview is inverted too |
-| **Threshold L / R** | 0 reports the strongest edge, however faint. Raise it to reject noise. Applies live |
-| **Ignore legs** | Robust wing detector, on by default ([why](#ignore-legs-and-antennae)) |
-| **Record** | Starts and stops video recording ([formats](#recording-video)) |
-| **New window** | Opens another Rekkefly window for the next rig, with its own camera and ports |
-| **Settings** | Detector, precise geometry, camera, outputs, recording and sampling |
+Edit thresholds and geometry under **Settings → Detector and markers**. Open
+**Settings → Background** to save an empty scene, enable subtraction or view the
+difference. See the [app guide](book/src/guide/app.md) for all controls.
 
 **Angles.** Wing angles are 0 when the wing points straight out from the body axis and positive toward the head. Kinefly uses the same convention. Head and abdomen angles follow the body axis, with clockwise positive in the image. All transmitted angles are in radians; geometry settings are in degrees.
 
 **Which edge.** A blurred wing has two edges in its sector. `primary_edge = "toward_head"` reports the **leading edge**: where the wing gives way to background on the head side, which is Kinefly's stroke-amplitude measure. Rekkefly chooses it by that polarity, not by position, so a stray feature beyond the wing cannot take its place. `"strongest"` reports whichever edge is clearest.
 
-**Debug traces.** In **Settings**, tick **Show signal diagnostics** (or start with `--show plots`). Two panels appear:
+**Debug traces.** Click **Diagnostics** or start with `--show plots` to open two plots.
 
 - **Wing angles · last 8 s**: left (red), right (green) and **L − R** (white), from −90° to +90°.
 - **Angular profile** of the selected wing across its sector: thin is the raw intensity, bold is what the robust detector ranks edges on, with legs and antennae removed. Vertical lines mark the edges found; the labelled one is reported, with its angle.
@@ -250,7 +244,7 @@ Measured on synthetic flies with exactly known wing angles (`cargo test --releas
 
 The results hold at 320×240 and 1280×960, with or without background subtraction, and for legs up to 7× thicker. The median angle error stays near 0.25°.
 
-**Limits.** Features **wider** than `spike_width_deg`, such as a badly out-of-focus leg 10 px wide, can still win now and then. Raise **Ignore features narrower than** in Settings for very thick legs, keeping it narrower than the wing's blur. A feature that touches the leading edge along its whole length is indistinguishable from the wing itself. **Marker placement matters most:** on the moth, hinges 20 px off the wing bases made L − R noise about twice as large, and a sector that clipped the body produced large L − R spikes. Check new setups with the debug traces. To return to the classic detector, untick **Ignore legs** or set `method = "edge"`.
+**Limits.** Features **wider** than `spike_width_deg`, such as a badly out-of-focus leg 10 px wide, can still win now and then. Raise **Ignore features narrower than** in Settings for very thick legs, keeping it narrower than the wing's blur. A feature that touches the leading edge along its whole length is indistinguishable from the wing itself. **Marker placement matters most:** on the moth, hinges 20 px off the wing bases made L − R noise about twice as large, and a sector that clipped the body produced large L − R spikes. Check new setups with the debug traces. To return to the classic detector, untick **Ignore legs and antennae** or set `method = "edge"`.
 
 ---
 
@@ -546,7 +540,7 @@ Run `rekkefly --help` for the full text, or see the [command-line reference](htt
 | **The moth plays instead of my camera** | No camera could be opened; the banner says why. Connect the camera and click **Retry camera** |
 | **A video won't open** | AVI plays natively. Other formats need FFmpeg on your PATH, or set `REKKEFLY_FFMPEG=/path/to/ffmpeg` |
 | **L − R is noisy or spiky** | Put the hinges on the wing bases, the inner radius just past the body and the outer radius inside the blur. Keep the sectors off the body, legs and head. Watch the debug traces while you adjust |
-| **The edge jumps to a leg** | Make sure **Ignore legs** is ticked (`method = "wing_blur"`). Increase `spike_width_deg` for thick legs |
+| **The edge jumps to a leg** | Make sure **Ignore legs and antennae** is ticked (`method = "wing_blur"`). Increase `spike_width_deg` for thick legs |
 | **Recording stopped: "queue is full"** | The disk can't keep up. Use `format = "mjpeg"`, a lower resolution or frame rate, or a faster disk |
 
 More problems and fixes: [Troubleshooting](https://pvnkmrksk.github.io/rekkefly/docs/troubleshooting.html).
@@ -573,7 +567,7 @@ The installer puts Rekkefly under `%LOCALAPPDATA%\Programs\Rekkefly`, with Start
 
 ### Ubuntu
 
-`sudo apt install ./rekkefly_0.6.3_amd64.deb` puts `rekkefly` on your PATH and adds a menu entry with **Start all rigs** and **Open the Bogong moth example** actions. Configs live in `~/.config/rekkefly/configs`. Builds target Ubuntu 22.04 and newer on x86-64.
+`sudo apt install ./rekkefly_0.6.4_amd64.deb` puts `rekkefly` on your PATH and adds a menu entry with **Start all rigs** and **Open the Bogong moth example** actions. Configs live in `~/.config/rekkefly/configs`. Builds target Ubuntu 22.04 and newer on x86-64.
 
 ### Portable folders
 

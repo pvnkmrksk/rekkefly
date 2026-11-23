@@ -4,7 +4,7 @@ Most rigs need no tuning beyond [placing the markers](../getting-started/markers
 well. When L − R is noisy, spiky or biased, work through this page in order:
 the first items fix most problems.
 
-Open **Settings → Show signal diagnostics** first. Every step below is judged
+Open **Diagnostics** first. Every step below is judged
 by watching the L − R trace and the angular profile.
 
 ## 1. Image quality
@@ -28,7 +28,7 @@ by watching the L − R trace and the angular profile.
 
 ## 3. Detector
 
-Use the robust detector (**Ignore legs** ticked, `method = "wing_blur"`) unless
+Use the robust detector (**Ignore legs and antennae** ticked, `method = "wing_blur"`) unless
 you need to reproduce old Kinefly numbers exactly.
 
 | Setting | Default | When to change it |
@@ -44,7 +44,7 @@ you need to reproduce old Kinefly numbers exactly.
 | Setting | When |
 | --- | --- |
 | **Invert** off (`dark_on_light = false`) | A bright insect on a dark background (the Bogong moth) |
-| **Save BG** + **Subtract** | A cluttered or uneven background: the tether, arena walls, a gradient. Save the background with the insect *out of view* |
+| **Save BG** and **Subtract background** | A cluttered or uneven background: the tether, arena walls, a gradient. Save the background with the insect *out of view* |
 
 ## 5. Sampling
 

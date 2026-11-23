@@ -18,6 +18,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+const WORKSPACE: Color32 = Color32::from_rgb(15, 20, 28);
+const SURFACE: Color32 = Color32::from_rgb(23, 31, 43);
+const BORDER: Color32 = Color32::from_rgb(48, 62, 79);
+const MUTED: Color32 = Color32::from_rgb(158, 175, 194);
+const ACCENT: Color32 = Color32::from_rgb(110, 220, 199);
+const WARNING: Color32 = Color32::from_rgb(244, 191, 110);
 const COLORS: [Color32; 4] = [
     Color32::from_rgb(247, 93, 99),
     Color32::from_rgb(87, 216, 115),
@@ -165,6 +171,41 @@ fn window_title(config: &Config) -> String {
     };
     format!("Rekkefly · {} · {source}{port}", config.instance)
 }
+fn style_workspace(ctx: &egui::Context) {
+    ctx.set_visuals(egui::Visuals::dark());
+    ctx.all_styles_mut(|style| {
+        style.spacing.item_spacing = Vec2::new(8.0, 8.0);
+        style.spacing.button_padding = Vec2::new(11.0, 5.0);
+        style.visuals.panel_fill = WORKSPACE;
+        style.visuals.window_fill = SURFACE;
+        style.visuals.extreme_bg_color = WORKSPACE;
+        style.visuals.weak_text_color = Some(MUTED);
+        style.visuals.selection.bg_fill = Color32::from_rgb(28, 79, 76);
+        style.visuals.selection.stroke = Stroke::new(1.0, ACCENT);
+        for (widget, fill) in [
+            (
+                &mut style.visuals.widgets.inactive,
+                Color32::from_rgb(33, 44, 60),
+            ),
+            (
+                &mut style.visuals.widgets.hovered,
+                Color32::from_rgb(47, 64, 83),
+            ),
+            (
+                &mut style.visuals.widgets.active,
+                Color32::from_rgb(53, 78, 99),
+            ),
+        ] {
+            widget.bg_fill = fill;
+            widget.weak_bg_fill = fill;
+            widget.bg_stroke = Stroke::new(1.0, BORDER);
+            widget.corner_radius = 6.into();
+            widget.expansion = 0.0;
+        }
+        style.visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, BORDER);
+    });
+}
+
 pub fn launch(launch: Launch) -> eframe::Result<()> {
     let Launch {
         saved,
@@ -184,7 +225,7 @@ pub fn launch(launch: Launch) -> eframe::Result<()> {
             .with_title(&title)
             .with_app_id("rekkefly")
             .with_inner_size([1000.0, 820.0])
-            .with_min_inner_size([720.0, 550.0])
+            .with_min_inner_size([440.0, 360.0])
             .with_drag_and_drop(true)
             .with_icon(app_icon()),
         ..Default::default()
@@ -194,14 +235,7 @@ pub fn launch(launch: Launch) -> eframe::Result<()> {
         &app_title,
         options,
         Box::new(move |cc| {
-            cc.egui_ctx.set_visuals(egui::Visuals::dark());
-            cc.egui_ctx.all_styles_mut(|s| {
-                s.spacing.item_spacing = Vec2::new(8.0, 6.0);
-                s.spacing.button_padding = Vec2::new(8.0, 4.0);
-                s.visuals.panel_fill = Color32::from_rgb(22, 25, 29);
-                s.visuals.window_fill = Color32::from_rgb(27, 30, 35);
-                s.visuals.selection.bg_fill = Color32::from_rgb(48, 65, 72);
-            });
+            style_workspace(&cc.egui_ctx);
             let mut app = App {
                 autosaver: Some(Autosaver::new(path.clone())),
                 last_autosave: config.clone(),
@@ -370,84 +404,232 @@ impl App {
         }
     }
     fn toolbar(&mut self, ui: &mut egui::Ui, state: &State) {
-        let mut changed = false;
-        egui::Panel::top("toolbar").show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.label(egui::RichText::new("rekkefly").strong().size(16.0));
-                ui.separator();
-                if ui.add_enabled(self.latest.is_some() && !state.finished, egui::Button::new("Save BG"))
-                    .on_hover_text("Save the next camera frame as the background. Capture an empty scene first.").clicked()
-                    && let Some(e) = &self.engine && let Err(error) = e.save_background() { self.status = format!("{error:#}"); }
-                ui.label(egui::RichText::new("Track").small().color(Color32::GRAY));
-                for (i, label) in [(2, "H"), (3, "A"), (0, "L"), (1, "R")] {
-                    changed |= ui.checkbox(&mut self.config.sector_mut(i).enabled, egui::RichText::new(label).color(COLORS[i]))
-                        .on_hover_text(format!("{} tracking and overlay", NAMES[i])).changed();
-                }
-                ui.separator();
-                let mut asymmetric = self.config.tracking.asymmetric;
-                if ui.checkbox(&mut asymmetric, "Asymmetric")
-                    .on_hover_text("Off: mirror wing geometry and move regions with the body. On: edit independently. Turning off mirrors from the last edited wing.").changed() {
-                    match geometry::set_asymmetric(&mut self.config, asymmetric, self.last_wing) {
-                        Ok(()) => changed = true,
-                        Err(e) => self.status = format!("{e:#}"),
+        let running = self.engine.as_ref().is_some_and(|e| !e.is_finished());
+        let (activity, color) = if state.paused && running {
+            ("Paused", WARNING)
+        } else if running && state.latest.is_some() {
+            ("Tracking", ACCENT)
+        } else if running {
+            ("Opening input", MUTED)
+        } else if state.message == "End of video" {
+            ("End of video", MUTED)
+        } else {
+            ("Stopped", MUTED)
+        };
+        // A regular frame uses the current height when actions wrap during resize.
+        egui::Frame::new()
+            .fill(SURFACE)
+            .inner_margin(egui::Margin::symmetric(14, 10))
+            .show(ui, |ui| {
+                ui.set_min_width(ui.available_width());
+                let title = |ui: &mut egui::Ui| {
+                    ui.label(egui::RichText::new("Rekkefly").size(23.0).strong());
+                    ui.separator();
+                    ui.colored_label(color, activity);
+                    if state.recording.active {
+                        ui.colored_label(COLORS[0], "Recording");
                     }
+                };
+                if ui.available_width() >= 760.0 {
+                    ui.horizontal(|ui| {
+                        title(ui);
+                        ui.add_space(18.0);
+                        self.toolbar_actions(ui, state, running);
+                    });
+                } else {
+                    ui.horizontal(title);
+                    self.toolbar_actions(ui, state, running);
                 }
-                changed |= ui.add_enabled(state.background_loaded, egui::Checkbox::new(&mut self.config.tracking.subtract_background, "Subtract"))
-                    .on_hover_text("Track differences from the saved background").changed();
-                let mut inverted = !self.config.tracking.dark_on_light;
-                if ui.checkbox(&mut inverted, "Invert").on_hover_text("Bright insect on dark background; invert the preview too").changed() {
-                    self.config.tracking.dark_on_light = !inverted; changed = true;
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.toggle_value(&mut self.show_settings, "Settings");
-                    // Rigs started by the launcher are managed as a set; no extra windows there.
-                    if self.options.fallback && ui.button("New window").on_hover_text("Open another Rekkefly window for the next rig config (its own camera and ports)").clicked() { self.new_window(); }
-                    if ui.add_enabled(self.engine.as_ref().is_some_and(|e| !e.is_finished()), egui::Button::new(if state.recording.active { "Stop REC" } else { "Record" })).on_hover_text(format!("Record the camera image (no overlay) as {} on a dedicated writer. Settings → Video to change.", self.config.recording.format.label())).clicked() {
-                        // A run-time toggle: never saved, so the next launch does not start recording by surprise.
-                        if let Some(e) = &self.engine && let Err(error) = e.record(!state.recording.active) { self.status = format!("{error:#}"); }
-                    }
-                    if ui.button(if self.dirty { "Save •" } else { "Save" }).on_hover_text("Save this instance's configuration").clicked() { self.save(); }
-                    let running = self.engine.as_ref().is_some_and(|e| !e.is_finished());
-                    if ui.button(if running { "Stop" } else { "Start" }).clicked() {
-                        if running { self.engine.as_ref().unwrap().stop(); self.status = "Stopping…".into(); }
-                        else { self.engine.take(); self.start(); }
-                    }
-                });
             });
-            ui.horizontal_wrapped(|ui| {
-                ui.small("Threshold").on_hover_text("0 selects the strongest measurable edge, including faint signals. Raise to reject noise; changes apply live.");
-                for (i, label) in [(0, "L"), (1, "R")] {
-                    ui.colored_label(COLORS[i], label);
-                    let s = self.config.sector_mut(i);
-                    changed |= ui.add_enabled(s.enabled, egui::DragValue::new(&mut s.threshold).range(0.0..=1.0).speed(0.0001).fixed_decimals(4))
-                        .on_hover_text("Drag to adjust, or click to type. 0 = any measurable edge.").changed();
-                }
-                ui.separator();
-                let mut reject = self.config.tracking.left.method == Method::WingBlur && self.config.tracking.right.method == Method::WingBlur;
-                if ui.checkbox(&mut reject, "Ignore legs").on_hover_text("Robust wing edges for both wings: legs, antennae and other thin dark features are ignored (recommended). Off: classic strongest edge. Tune in Settings.").changed() {
-                    self.config.tracking.left.method = if reject { Method::WingBlur } else { Method::Edge };
-                    self.config.tracking.right.method = if reject { Method::WingBlur } else { Method::Edge };
-                    changed = true;
-                }
-                ui.add_enabled(state.background_loaded && self.config.tracking.subtract_background, egui::Checkbox::new(&mut self.show_difference, "Difference view"));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.small("Drag any dot to edit").on_hover_text("Drag the white center dot to move the setup. Head/tail drags rotate regions around the updated midline. Corner dots change angle and radius together.");
-                });
-            });
-        });
-        if changed {
-            self.apply();
-        }
     }
-    fn settings(&mut self, ctx: &egui::Context, state: &State) {
-        if !self.show_settings {
-            return;
-        }
-        let mut open = self.show_settings;
+
+    fn toolbar_actions(&mut self, ui: &mut egui::Ui, state: &State, running: bool) {
+        ui.horizontal_wrapped(|ui| {
+            let capture = egui::Button::new(if running { "Stop" } else { "Start" });
+            let capture = if running {
+                capture
+            } else {
+                capture.fill(ui.visuals().selection.bg_fill)
+            };
+            if ui
+                .add(capture)
+                .on_hover_text("Start or stop acquisition")
+                .clicked()
+            {
+                if let Some(engine) = self.engine.as_ref().filter(|_| running) {
+                    engine.stop();
+                    self.status = "Stopping…".into();
+                } else {
+                    self.engine.take();
+                    self.start();
+                }
+            }
+            let record = if state.recording.active {
+                "Stop REC"
+            } else {
+                "Record"
+            };
+            if ui
+                .add_enabled(
+                    running,
+                    egui::Button::new(egui::RichText::new(record).color(COLORS[0])),
+                )
+                .on_hover_text(format!(
+                    "Record the camera without overlays ({})",
+                    self.config.recording.format.label()
+                ))
+                .clicked()
+                && let Some(engine) = &self.engine
+                && let Err(error) = engine.record(!state.recording.active)
+            {
+                self.status = format!("{error:#}");
+            }
+            if ui
+                .button(if self.dirty { "Save •" } else { "Save" })
+                .on_hover_text("Save this instance's configuration")
+                .clicked()
+            {
+                self.save();
+            }
+            ui.toggle_value(&mut self.show_settings, "Settings");
+            ui.toggle_value(&mut self.show_diagnostics, "Diagnostics");
+            // Manifest rigs are managed as a set by their launcher.
+            if self.options.fallback
+                && ui
+                    .button("New window")
+                    .on_hover_text("Open the next rig config in another window")
+                    .clicked()
+            {
+                self.new_window();
+            }
+        });
+    }
+
+    fn tracking_controls(&mut self, ui: &mut egui::Ui, state: &State) -> bool {
         let mut changed = false;
-        egui::Window::new("Settings").open(&mut open).default_width(360.0).default_pos([620.0, 95.0]).show(ctx, |ui| {
-            egui::ScrollArea::vertical().max_height(620.0).show(ui, |ui| {
-                ui.horizontal(|ui| {
+        ui.label("Track and draw");
+        ui.horizontal_wrapped(|ui| {
+            for (i, label) in [(0, "Left"), (1, "Right"), (2, "Head"), (3, "Abdomen")] {
+                changed |= ui
+                    .checkbox(
+                        &mut self.config.sector_mut(i).enabled,
+                        egui::RichText::new(label).color(COLORS[i]),
+                    )
+                    .changed();
+            }
+        });
+        let mut asymmetric = self.config.tracking.asymmetric;
+        if ui
+            .checkbox(&mut asymmetric, "Asymmetric wings")
+            .on_hover_text(
+                "Edit the wings independently. Turning this off mirrors from the last edited wing.",
+            )
+            .changed()
+        {
+            match geometry::set_asymmetric(&mut self.config, asymmetric, self.last_wing) {
+                Ok(()) => changed = true,
+                Err(error) => self.status = format!("{error:#}"),
+            }
+        }
+        let mut bright = !self.config.tracking.dark_on_light;
+        if ui
+            .checkbox(&mut bright, "Bright insect on dark background")
+            .changed()
+        {
+            self.config.tracking.dark_on_light = !bright;
+            changed = true;
+        }
+        let tracking = &mut self.config.tracking;
+        let mut reject =
+            tracking.left.method == Method::WingBlur && tracking.right.method == Method::WingBlur;
+        if ui.checkbox(&mut reject, "Ignore legs and antennae")
+            .on_hover_text("Use the robust detector for both wings. Turning this off selects the classic edge detector.").changed()
+        {
+            let method = if reject { Method::WingBlur } else { Method::Edge };
+            tracking.left.method = method;
+            tracking.right.method = method;
+            changed = true;
+        }
+        egui::CollapsingHeader::new("Background").show(ui, |ui| {
+            ui.small(if state.background_loaded {
+                "Reference loaded"
+            } else {
+                "No reference loaded"
+            });
+            ui.horizontal_wrapped(|ui| {
+                if ui
+                    .add_enabled(
+                        self.latest.is_some() && !state.finished,
+                        egui::Button::new("Save BG"),
+                    )
+                    .on_hover_text("Save the next camera frame. Capture an empty scene first.")
+                    .clicked()
+                    && let Some(engine) = &self.engine
+                    && let Err(error) = engine.save_background()
+                {
+                    self.status = format!("{error:#}");
+                }
+                if ui.button("Load saved background").clicked()
+                    && let Some(engine) = &self.engine
+                    && let Err(error) = engine.load_background()
+                {
+                    self.status = format!("{error:#}");
+                }
+            });
+            if matches!(self.config.source, SourceConfig::Demo { .. })
+                && ui.button("Use clean demo background").clicked()
+                && let Some(engine) = &self.engine
+                && let Err(error) = engine.demo_background()
+            {
+                self.status = format!("{error:#}");
+            }
+            changed |= ui
+                .add_enabled(
+                    state.background_loaded,
+                    egui::Checkbox::new(
+                        &mut self.config.tracking.subtract_background,
+                        "Subtract background",
+                    ),
+                )
+                .changed();
+            ui.add_enabled(
+                state.background_loaded && self.config.tracking.subtract_background,
+                egui::Checkbox::new(&mut self.show_difference, "Difference view"),
+            );
+            ui.label("Background path");
+            self.dirty |= ui
+                .text_edit_singleline(&mut self.config.tracking.background_path)
+                .changed();
+            ui.small("Restart to apply a changed background path.");
+        });
+        changed
+    }
+
+    fn settings(&mut self, ui: &mut egui::Ui, state: &State) {
+        ui.heading("Settings");
+        ui.separator();
+        let mut changed = false;
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("Restart acquisition").clicked() { self.request_restart(); }
+                if ui.button("Reload config").clicked() {
+                    match Config::load(&self.path) {
+                        Ok(c) => {
+                            self.config = self.overrides.apply(&c);
+                            self.saved = c;
+                            self.last_autosave = self.config.clone();
+                            self.dirty = false;
+                            self.request_restart();
+                        }
+                        Err(error) => self.status = format!("{error:#}"),
+                    }
+                }
+            });
+            ui.separator();
+            changed |= self.tracking_controls(ui, state);
+            ui.separator();
+            egui::CollapsingHeader::new("Detector and markers").default_open(true).show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
                     for (i, name) in ["Left", "Right", "Head", "Abdomen"].into_iter().enumerate() {
                         ui.selectable_value(&mut self.selected, i, egui::RichText::new(name).color(COLORS[i]));
                     }
@@ -461,7 +643,7 @@ impl App {
                     ui.selectable_value(&mut s.method, Method::Centroid, "Centroid");
                 });
                 if s.method == Method::WingBlur {
-                    ui.horizontal(|ui| { ui.label("Ignore features narrower than"); ui.add(egui::DragValue::new(&mut s.spike_width_deg).range(0.0..=45.0).speed(0.1).suffix("°")); });
+                    ui.horizontal_wrapped(|ui| { ui.label("Ignore features narrower than"); ui.add(egui::DragValue::new(&mut s.spike_width_deg).range(0.0..=45.0).speed(0.1).suffix("°")); });
                     ui.small("Thin dark features (legs, antennae) are removed per radial band, then the median edge across bands is used. Keep this narrower than the wing's blur.");
                     ui.horizontal(|ui| { ui.label("Contrast cap"); ui.add(egui::DragValue::new(&mut s.contrast_cap).range(0.001..=1.0).speed(0.001).fixed_decimals(3)); });
                 }
@@ -490,20 +672,12 @@ impl App {
                         Err(e) => self.status = format!("{e:#}"),
                     }
                 }
-                ui.checkbox(&mut self.show_diagnostics, "Show signal diagnostics");
                 if let Some(snapshot) = &self.latest {
                     let p = [&snapshot.measurement.left, &snapshot.measurement.right, &snapshot.measurement.head, &snapshot.measurement.abdomen][self.selected];
                     ui.small(format!("Peak {:.5} · selected {:.5} · coverage {:.0}%", p.peak_gradient, p.strength, p.coverage * 100.0));
                 }
-                ui.separator();
-                egui::CollapsingHeader::new("Background").show(ui, |ui| {
-                    ui.small(if state.background_loaded { "Reference loaded" } else { "No reference loaded" });
-                    ui.small("Save BG captures the next frame. Use an empty scene before placing the insect.");
-                    if ui.button("Load saved background").clicked() && let Some(e) = &self.engine && let Err(error) = e.load_background() { self.status = format!("{error:#}"); }
-                    if matches!(self.config.source, SourceConfig::Demo { .. }) && ui.button("Use clean demo background").clicked() && let Some(e) = &self.engine && let Err(error) = e.demo_background() { self.status = format!("{error:#}"); }
-                    self.dirty |= ui.text_edit_singleline(&mut self.config.tracking.background_path).changed();
-                    ui.small("Restart to apply a changed background path.");
-                });
+            });
+            ui.separator();
                 egui::CollapsingHeader::new("Camera / input").show(ui, |ui| { self.source_controls(ui); });
                 egui::CollapsingHeader::new("Instance / output").show(ui, |ui| {
                     let o = &self.overrides;
@@ -540,29 +714,22 @@ impl App {
                     ui.horizontal(|ui| { ui.label("Radial samples"); changed |= ui.add(egui::DragValue::new(&mut self.config.tracking.radial_samples).range(4..=1024)).changed(); });
                     ui.horizontal(|ui| { ui.label("Preview FPS"); changed |= ui.add(egui::DragValue::new(&mut self.config.preview_fps).range(1..=120)).changed(); });
                 });
-                ui.separator();
-                ui.horizontal(|ui| {
-                    if ui.button("Restart acquisition").clicked() { self.request_restart(); }
-                    if ui.button("Reload config").clicked() {
-                        match Config::load(&self.path) { Ok(c) => { self.config = self.overrides.apply(&c); self.saved = c; self.last_autosave = self.config.clone(); self.dirty = false; self.request_restart(); }, Err(e) => self.status = format!("{e:#}") }
-                    }
-                });
-                if let Some(error) = &state.error { ui.colored_label(COLORS[0], error); }
-                if !self.status.is_empty() { ui.small(&self.status); }
-                ui.small(format!("Config: {}", self.path.display()));
-                ui.small(format!("{} frames · {} local UDP drops", state.frames, state.udp_dropped));
-            });
+            ui.separator();
+            ui.small(format!("Config: {}", self.path.display()));
+            ui.small(format!("{} frames · {} local UDP drops", state.frames, state.udp_dropped));
         });
-        self.show_settings = open;
         if changed {
             self.apply();
         }
     }
     fn camera_view(&mut self, ui: &mut egui::Ui) {
         let available = ui.available_size();
+        if available.x < 1.0 || available.y < 1.0 {
+            return;
+        }
         let (container, _) = ui.allocate_exact_size(available, egui::Sense::hover());
         ui.painter()
-            .rect_filled(container, 0.0, Color32::from_gray(9));
+            .rect_filled(container, 8.0, Color32::from_rgb(8, 12, 18));
         let (w, h, _) = self.config.source.dimensions();
         let scale = (available.x / w as f32).min(available.y / h as f32);
         let rect = Rect::from_center_size(
@@ -768,15 +935,18 @@ impl App {
         if lines.is_empty() {
             return;
         }
-        let height = lines.len() as f32 * 18.0 + 12.0;
+        let height = lines.len() as f32 * 16.0 + 10.0;
+        if rect.height() < height + 12.0 || rect.width() < 146.0 {
+            return;
+        }
         let panel = Rect::from_min_size(
             Pos2::new(rect.left() + 10.0, rect.bottom() - height - 10.0),
-            Vec2::new(173.0, height),
+            Vec2::new(136.0, height),
         );
         painter.rect_filled(panel, 5.0, Color32::from_black_alpha(145));
         for (i, (text, color)) in lines.into_iter().enumerate() {
             painter.text(
-                panel.min + Vec2::new(8.0, 6.0 + i as f32 * 18.0),
+                panel.min + Vec2::new(8.0, 5.0 + i as f32 * 16.0),
                 egui::Align2::LEFT_TOP,
                 text,
                 egui::FontId::monospace(12.0),
@@ -790,7 +960,7 @@ impl App {
                 "This run uses a temporary source: {}. Your saved source is unchanged.",
                 self.overrides.note.as_deref().unwrap_or("set at launch")
             ));
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 if ui.button("Back to saved source").clicked() {
                     self.use_source(None, None);
                 }
@@ -1034,50 +1204,44 @@ impl App {
         }
     }
     fn banner(&mut self, ui: &mut egui::Ui, state: &State) {
-        let (text, color) = if let Some(reason) = &state.fallback {
-            let what = if state.source == "Simulated fly" {
-                "a simulated fly".into()
+        let (text, detail, color) = if let Some(reason) = &state.fallback {
+            let text = if state.source == "Simulated fly" {
+                "No camera · simulated fly"
             } else if state.example.is_some() {
-                format!(
-                    "the {} with its own markers (edits are not saved)",
-                    state
-                        .source
-                        .strip_prefix("Sample video: ")
-                        .unwrap_or("sample video")
-                )
+                "No camera · sample markers are temporary"
             } else {
-                "a sample video".into()
+                "No camera · sample video"
             };
-            (
-                format!("No camera — playing {what}. {reason}"),
-                Color32::from_rgb(240, 180, 80),
-            )
+            (text, reason.as_str(), WARNING)
         } else if let Some(note) = &self.overrides.note {
-            (
-                format!("{note} · not saved to the config"),
-                Color32::from_rgb(120, 200, 230),
-            )
+            ("Temporary source", note.as_str(), ACCENT)
         } else {
             return;
         };
-        egui::Frame::new()
-            .fill(Color32::from_black_alpha(190))
-            .inner_margin(egui::Margin::symmetric(10, 6))
+        let (retry, restore) = egui::Frame::new()
+            .fill(SURFACE)
+            .inner_margin(egui::Margin::symmetric(14, 5))
             .show(ui, |ui| {
+                ui.set_min_width(ui.available_width());
                 ui.horizontal_wrapped(|ui| {
-                    ui.add(egui::Label::new(egui::RichText::new(text).color(color).small()).wrap());
-                    if state.fallback.is_some() && ui.small_button("Retry camera").clicked() {
-                        self.request_restart();
-                    }
-                    if self.overrides.source.is_some()
-                        && ui.small_button("Back to saved source").clicked()
-                    {
-                        self.use_source(None, None);
-                    }
-                });
-            });
+                    ui.colored_label(color, text).on_hover_text(detail);
+                    let retry =
+                        state.fallback.is_some() && ui.small_button("Retry camera").clicked();
+                    let restore = self.overrides.source.is_some()
+                        && ui.small_button("Back to saved source").clicked();
+                    (retry, restore)
+                })
+                .inner
+            })
+            .inner;
+        if retry {
+            self.request_restart();
+        }
+        if restore {
+            self.use_source(None, None);
+        }
     }
-    fn plots(&self, ui: &mut egui::Ui) {
+    fn plots(&self, ui: &mut egui::Ui, plot_height: f32) {
         let small = |ui: &egui::Ui, rect: Rect, at: Pos2, text: &str, color: Color32| {
             ui.painter().text(
                 at.clamp(rect.min, rect.max),
@@ -1101,7 +1265,7 @@ impl App {
                 }
             });
             let (rect, _) = ui
-                .allocate_exact_size(Vec2::new(ui.available_width(), 110.0), egui::Sense::hover());
+                .allocate_exact_size(Vec2::new(ui.available_width(), plot_height), egui::Sense::hover());
             plot_grid(ui.painter(), rect);
             for (text, frac) in [("+90°", 0.0), ("0°", 0.5), ("−90°", 1.0)] {
                 small(
@@ -1148,23 +1312,10 @@ impl App {
                 }
             }
             let ui = &mut columns[1];
-            let robust = self.config.sectors()[self.selected].method == Method::WingBlur;
-            ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new(format!("{} · angular profile", NAMES[self.selected]))
-                        .size(12.0)
-                        .strong(),
-                );
-                if robust {
-                    ui.label(
-                        egui::RichText::new("thin: raw · bold: legs & antennae removed")
-                            .size(11.0)
-                            .color(Color32::GRAY),
-                    );
-                }
-            });
+            ui.add(egui::Label::new(egui::RichText::new(format!("{} · angular profile", NAMES[self.selected])).size(12.0).strong()).truncate())
+                .on_hover_text("Thin trace: raw intensity. Bold trace: robust profile after thin features are removed.");
             let (rect, _) = ui
-                .allocate_exact_size(Vec2::new(ui.available_width(), 110.0), egui::Sense::hover());
+                .allocate_exact_size(Vec2::new(ui.available_width(), plot_height), egui::Sense::hover());
             plot_grid(ui.painter(), rect);
             if let Some(snapshot) = &self.latest {
                 let state = [
@@ -1222,18 +1373,16 @@ impl App {
                             small(
                                 ui,
                                 rect,
-                                Pos2::new(x + 4.0, rect.min.y + 3.0),
+                                Pos2::new((x + 4.0).min(rect.right() - 40.0), rect.min.y + 3.0),
                                 &format!("{:+.1}°", relative.to_degrees()),
                                 Color32::from_gray(230),
                             );
                         }
                     }
                 }
-                ui.small(format!(
-                    "Peak {:.5} · ROI coverage {:.0}%",
-                    state.peak_gradient,
-                    state.coverage * 100.0
-                ));
+                ui.label(egui::RichText::new(format!(
+                    "Peak {:.5} · ROI coverage {:.0}%", state.peak_gradient, state.coverage * 100.0
+                )).size(12.0).color(MUTED));
             }
         });
     }
@@ -1315,94 +1464,139 @@ impl eframe::App for App {
         let ctx = ui.ctx().clone();
         let state = self.engine.as_ref().map(Engine::state).unwrap_or_default();
         self.observe(&ctx, &state);
-        self.toolbar(ui, &state);
-        egui::Panel::bottom("status").show(ui, |ui| {
-            ui.horizontal(|ui| {
-                let running = self.engine.as_ref().is_some_and(|e| !e.is_finished());
-                let live = running && state.latest.is_some();
-                ui.colored_label(
-                    if live { COLORS[1] } else { Color32::GRAY },
-                    if live {
-                        "Live"
-                    } else if running {
-                        "Opening"
-                    } else if state.message == "End of video" {
-                        "End of video · press Start to replay"
-                    } else {
-                        "Stopped"
-                    },
-                );
-                ui.small(&self.config.instance);
-                if state.recording.active {
-                    ui.colored_label(
-                        COLORS[0],
-                        format!(
-                            "REC {} · {:.0} MB",
-                            state.recording.written,
-                            state.recording.bytes as f64 / 1e6
-                        ),
-                    );
-                }
-                if let Some(error) = &state.recording.error {
-                    ui.colored_label(COLORS[0], "REC error")
-                        .on_hover_text(error);
-                }
-                ui.separator();
-                if let Some(s) = &self.latest {
-                    ui.small(format!(
-                        "{:.1} fps · {:.0} µs",
-                        s.measurement.capture_fps, s.measurement.processing_us
-                    ));
-                }
-                if let Some(error) = &state.output_error {
-                    ui.colored_label(COLORS[0], "Outputs off")
-                        .on_hover_text(error);
-                }
-                if let Some(error) = &state.error {
-                    ui.colored_label(COLORS[0], "Camera error")
-                        .on_hover_text(error);
-                } else if !["Live", "Acquisition stopped", "End of video"]
-                    .contains(&state.message.as_str())
-                {
-                    ui.small(&state.message);
-                }
-                if !self.status.is_empty() {
-                    ui.add(egui::Label::new(egui::RichText::new(&self.status).small()).truncate());
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let label = if self.config.output.zmq_enabled {
-                        format!("ZMQ {}", self.config.output.zmq_bind)
-                    } else if !self.config.output.enabled {
-                        "Output off".into()
-                    } else if live {
-                        format!("UDP {}", self.config.output.target)
-                    } else {
-                        "UDP waiting".into()
-                    };
-                    ui.small(label).on_hover_text(format!(
-                        "UDP sender {} · {} UDP drops · {} ZMQ queue drops",
-                        self.config.output.bind, state.udp_dropped, state.zmq_dropped
-                    ));
-                });
-            });
-        });
-        if self.show_diagnostics {
-            egui::Panel::bottom("diagnostics").show(ui, |ui| {
-                self.plots(ui);
-            });
+        self.workspace(ui, &state);
+        self.after_ui(&ctx);
+    }
+}
+
+impl App {
+    fn workspace(&mut self, ui: &mut egui::Ui, state: &State) {
+        ui.painter().rect_filled(ui.max_rect(), 0.0, WORKSPACE);
+        self.toolbar(ui, state);
+        self.banner(ui, state);
+        self.status_bar(ui, state);
+
+        let dock_settings = self.show_settings && ui.available_width() >= 860.0;
+        if dock_settings {
+            egui::Panel::right("settings")
+                .resizable(false)
+                .exact_size(352.0)
+                .frame(
+                    egui::Frame::new()
+                        .fill(SURFACE)
+                        .inner_margin(egui::Margin::same(14)),
+                )
+                .show(ui, |ui| self.settings(ui, state));
+        }
+        let compact_settings = self.show_settings && !dock_settings;
+        if self.show_diagnostics && !compact_settings {
+            let plot_height = (ui.available_height() * 0.30).clamp(50.0, 110.0);
+            egui::Panel::bottom("diagnostics")
+                .exact_size(plot_height + 64.0)
+                .frame(
+                    egui::Frame::new()
+                        .fill(SURFACE)
+                        .inner_margin(egui::Margin::symmetric(14, 8)),
+                )
+                .show(ui, |ui| self.plots(ui, plot_height));
         }
         egui::CentralPanel::default()
-            .frame(egui::Frame::NONE)
+            .frame(
+                egui::Frame::new()
+                    .fill(WORKSPACE)
+                    .inner_margin(egui::Margin::same(14)),
+            )
             .show(ui, |ui| {
-                let full = ui.max_rect();
-                self.camera_view(ui);
-                let mut top = ui.new_child(
-                    egui::UiBuilder::new()
-                        .max_rect(Rect::from_min_size(full.min, Vec2::new(full.width(), 40.0))),
-                );
-                self.banner(&mut top, &state);
+                if compact_settings {
+                    self.settings(ui, state);
+                } else {
+                    self.camera_view(ui);
+                }
             });
-        self.settings(&ctx, &state);
+    }
+
+    fn status_bar(&self, ui: &mut egui::Ui, state: &State) {
+        let message = if !self.status.is_empty() {
+            Some(self.status.as_str())
+        } else if ![
+            "",
+            "Live",
+            "Acquisition stopped",
+            "End of video",
+            "No camera: showing a sample",
+        ]
+        .contains(&state.message.as_str())
+        {
+            Some(state.message.as_str())
+        } else {
+            None
+        };
+        egui::Panel::bottom("status")
+            .exact_size(if message.is_some() { 54.0 } else { 32.0 })
+            .frame(
+                egui::Frame::new()
+                    .fill(SURFACE)
+                    .inner_margin(egui::Margin::symmetric(14, 6)),
+            )
+            .show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    if let Some(error) = &state.recording.error {
+                        ui.colored_label(COLORS[0], "Recording error")
+                            .on_hover_text(error);
+                    } else if state.recording.active {
+                        ui.small(format!(
+                            "{} frames · {:.1} MB",
+                            state.recording.written,
+                            state.recording.bytes as f64 / 1e6
+                        ));
+                    }
+                    if let Some(error) = &state.error {
+                        ui.colored_label(COLORS[0], "Input error")
+                            .on_hover_text(error);
+                    }
+                    if let Some(s) = &self.latest {
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{:.1} fps · {:.0} µs",
+                                s.measurement.capture_fps, s.measurement.processing_us
+                            ))
+                            .size(12.0)
+                            .color(MUTED),
+                        );
+                    }
+                    let output = if let Some(error) = &state.output_error {
+                        ui.colored_label(COLORS[0], "Outputs off")
+                            .on_hover_text(error);
+                        None
+                    } else if self.config.output.zmq_enabled {
+                        Some(format!("ZMQ {}", self.config.output.zmq_bind))
+                    } else if self.config.output.enabled {
+                        Some(format!("UDP {}", self.config.output.target))
+                    } else {
+                        Some("Outputs off".into())
+                    };
+                    if let Some(output) = output {
+                        ui.add(
+                            egui::Label::new(egui::RichText::new(&output).size(12.0).color(MUTED))
+                                .truncate(),
+                        )
+                        .on_hover_text(format!(
+                            "{output}\nUDP sender {} · {} UDP drops · {} ZMQ queue drops",
+                            self.config.output.bind, state.udp_dropped, state.zmq_dropped
+                        ));
+                    }
+                });
+                if let Some(message) = message {
+                    ui.add(
+                        egui::Label::new(egui::RichText::new(message).small().color(MUTED))
+                            .truncate(),
+                    )
+                    .on_hover_text(message);
+                }
+            });
+    }
+
+    fn after_ui(&mut self, ctx: &egui::Context) {
         if self.config != self.last_autosave {
             if self.config.autosave
                 && self.rig.is_none()
@@ -1417,7 +1611,7 @@ impl eframe::App for App {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.title = title;
         }
-        self.dropped_files(&ctx);
+        self.dropped_files(ctx);
         if self.screenshot.is_some()
             && !self.screenshot_requested
             && self.started.elapsed() > self.screenshot_after
@@ -1548,6 +1742,59 @@ mod tests {
             screenshot_requested: false,
             started: Instant::now(),
             control: None,
+        }
+    }
+    #[test]
+    fn primary_actions_survive_window_resize() {
+        let ctx = egui::Context::default();
+        style_workspace(&ctx);
+        let mut app = quiet_app(Config::demo());
+        app.options.fallback = true;
+        app.show_settings = true;
+        app.show_diagnostics = true;
+        for width in [1000.0, 720.0, 480.0, 440.0, 1000.0] {
+            let screen = Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 360.0));
+            let mut state = State {
+                fallback: Some("Camera is unavailable. ".repeat(90)),
+                ..State::default()
+            };
+            state.recording.active = true;
+            app.dirty = true;
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(screen),
+                    ..Default::default()
+                },
+                |ui| app.workspace(ui, &state),
+            );
+            output.textures_delta.clear();
+            for label in [
+                "Start",
+                "Save •",
+                "Stop REC",
+                "Settings",
+                "Diagnostics",
+                "New window",
+                "Retry camera",
+                "Restart acquisition",
+                "Reload config",
+            ] {
+                assert!(
+                    output.shapes.iter().any(|shape| {
+                        if let egui::Shape::Text(text) = &shape.shape {
+                            text.galley.text() == label
+                                && shape
+                                    .clip_rect
+                                    .intersect(screen)
+                                    .expand(1.0)
+                                    .contains_rect(text.galley.rect.translate(text.pos.to_vec2()))
+                        } else {
+                            false
+                        }
+                    }),
+                    "{label} is clipped or missing at {width} points"
+                );
+            }
         }
     }
     #[test]
